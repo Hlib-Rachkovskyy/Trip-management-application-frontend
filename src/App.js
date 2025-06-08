@@ -87,7 +87,7 @@ function OrganiserHeader({props}) {
             <button className="choice-btn" onClick={() => props.setPopup('create-trip')}>Create trip</button>
             <button className="choice-btn" onClick={() => props.setView('trips-created')}>Trips</button>
             <button className="choice-btn" onClick={() => props.setView('form')}>View written forms</button>
-            {props.view === 'tourist-services' && (<h1 className='black'>{props.touristServices.name}</h1>)}
+            {props.view === 'tourist-services' && (<h1 className='black'>You currently viewing tourist service for trip: {props.touristServices.name}</h1>)}
         </nav>
     </header>)
 
@@ -316,6 +316,16 @@ function ManagementStateComponent({props}) {
             props.setPopup(null)
             break;
         case 'add-list':
+            useEffect(() => { // dont work need to conditionaly so i would able to submit, because it is disabled
+                if (props.currentTouristService) {
+                    if (props.currentTouristService.vehicle) {
+                        setSelectedItem('vehicle');
+                    } else if (props.currentTouristService.hotel) {
+                        setSelectedItem('hotel');
+                    }
+                }
+            }, [props.currentTouristService])
+
             return (<div className="container-text">
                 {
                     props.currentTouristService != null && Object.entries(props.currentTouristService).map(([key, value]) => {
@@ -337,7 +347,7 @@ function ManagementStateComponent({props}) {
                     (props.vehicleLayout.map((key, index) => {
                         return (<div className="">{key}: <input className=""/></div>)}))
                 }
-                <button className="choice-btn" onClick={() =>
+                <button className="choice-btn" disabled={!selectedItem} onClick={() =>
                 {props.setManagementState('add-list-to-trip');}}>Submit</button>
             </div>)
         case 'add-list-to-trip': // hotel vehicle checker
