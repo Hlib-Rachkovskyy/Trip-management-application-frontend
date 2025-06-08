@@ -367,14 +367,6 @@ function HandleTouristServiceManagementCompletion({props}){
 function ViewUsers({props}) {
     const [selectedId, setSelectedId] = useState('');
     const [selected, setSelected] = useState(null);
-    console.log(props.popupData);
-    const handleAssign = (e) => {
-        const id = e.target.value;
-        setSelectedId(id);
-        const selectedItem = props.popupData?.find(item => item.id.toString() === id);
-        setSelected(selectedItem);
-    };
-    console.log(selected)
     return (
         <div>
             <select value={selectedId} onChange={handleAssign}>
@@ -390,23 +382,20 @@ function ViewUsers({props}) {
             selected && typeof selected === 'object' && (
                 <div className="scrollableArea">
                 {Object.entries(selected).map(([key, value]) =>
-                         (<p key={key}>
+                    (key !== "id" && key !=="user" && (<p key={key}>
                             {(<strong>{key}:</strong>)} {value?.toString()}
-                        </p>)) }
+                        </p>))) }
 
                     {Object.entries(selected.user).map(([key, value]) => (
-                        <p key={key}>
+                        (key !== "id" && (<p key={key}>
                             <strong>{key}:</strong> {value?.toString()}
-                        </p>
+                        </p>))
                     ))}
-                    {selected.user.role === 'IsPartOfTour' && (<button onClick={handleAssign}>Delete</button>)}
-                    {selected.user.role === 'Registered' && (<button onClick={handleAssign}>Assign</button>)}
-
                 </div>
             )}
-            <button onClick={handleAssign} disabled={!selected}>
-                Show data
-            </button>
+            { selected?.role === 'IsPartOfTour' && (<button onClick={() => { }}>Delete</button>)}
+            { selected?.role === 'Registered' && (<button className="choice-btn" onClick={() => { }}>Assign</button>)}
+
         </div>
     );
 }
