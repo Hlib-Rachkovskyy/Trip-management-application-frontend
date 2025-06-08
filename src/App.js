@@ -15,7 +15,7 @@ function App(){
     const [vehicleLayout, setVehicleLayout] = useState(["name", "phoneNumbers", "state", "vehicleType", "driverCompany"]);
     const [addHotelToTripLayout, setAddHotelToTripLayout] = useState(["hotelStartDate", "hotelEndDate", "daysInHotel"]);
     const [addVehicleToTripLayout, setAddVehicleToTripLayout] = useState(["startDate", "endDate", "startPoint"]);
-    /* explore */
+
     const props = {
         hotelLayout, setHotelLayout,
         vehicleLayout, setVehicleLayout,
@@ -84,9 +84,9 @@ function ManagerHeader({props}){
 function OrganiserHeader({props}) {
     return (<header className="Header">
         <nav>
-            <button className="choice-btn" onClick={() => props.setPopup('create-trip')}>Create trip</button>
-            <button className="choice-btn" onClick={() => props.setView('trips-created')}>Trips</button>
-            <button className="choice-btn" onClick={() => props.setView('form')}>View written forms</button>
+            <button className="choice-btn" onClick={() => {props.setPopup('create-trip'); props.setManagementState(null)}}>Create trip</button>
+            <button className="choice-btn" onClick={() => {props.setView('trips-created'); props.setManagementState(null) }}>Trips</button>
+            <button className="choice-btn" onClick={() => {props.setView('form'); props.setManagementState(null)}}>View written forms</button>
             {props.view === 'tourist-services' && (<h1 className='black'>You currently viewing tourist service for trip: {props.touristServices.name}</h1>)}
         </nav>
     </header>)
@@ -109,17 +109,45 @@ function FetchData(string){
 }
 
 function UserView({props}) {
+    const [data, setData] = useState([]);
+    const [loading, setLoading] = useState(true);
+    useEffect(() => {
+        let url;
+        if (props.view === 'explore') {
+            url = 'http://localhost:8080/user/1/trips/explore';
+        } else if (props.view === 'registered') {
+            url = 'http://localhost:8080/user/1/trips';
+        } else {
+            setData([]);
+            return;
+        }
+
+        setLoading(true);
+        fetch(url)
+            .then((res) => res.json())
+            .then((data) => {
+                setData(data);
+                setLoading(false);
+            })
+            .catch((err) => {
+                console.error('Failed to fetch:', err);
+                setLoading(false);
+            });
+
+    }, [props.view])
+
+    if (loading) return <div>Loading...</div>;
     switch (props.view) {
-        case 'explore': // make on which is not registred
-            return (<PostList props={props}/>)
-        case 'registered':
-            const string = 'http://localhost:8080/user/1/trips'
-            const data = FetchData(string)
-            return (<PostList props={props} data={data}/>)
         case 'form':
             return (<FormPage props={props}/>)
         case 'announcements':
             return (<AnnouncementsReadOnly props={props}/>)
+        case 'registered':
+            return (<PostList props={props} data={data} />);
+        case 'explore':
+            return (<PostList props={props} data={data} />);
+
+
     }
 
     return (<></>)
@@ -145,6 +173,7 @@ function OrganiserView({props}){
 }
 
 function PostList({props, data}){
+    console.log(data)
     return (
         <div className="container-list">
             {Array.isArray(data) && data?.map((value) =>
@@ -154,7 +183,63 @@ function PostList({props, data}){
     )
 }
 
+
+
 function PostBlock({props, data}) {
+
+    const handleResign = async () => {
+        try {
+            const response = await fetch(`/user-trip/${props.tripId}/resign/${props.userId}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                const message = await response.text();
+                alert("Failed: " + message);
+                return;
+            }
+
+            alert("Successfully resigned from the trip.");
+
+        } catch (err) {
+            console.error("Error resigning from trip:", err);
+            alert("Error occurred while resigning.");
+        }
+    };
+
+
+    const handleApply = async () => {
+        try {
+            const response = await fetch(`/user-trip/${props.currentTripId}/apply/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    userId: props.currentUserId,
+                    tripId: props.currentTripId,
+                }),
+            });
+
+            if (!response.ok) {
+                if (response.status === 409) {
+                    alert("You are already registered for this trip.");
+                } else {
+                    alert("Failed to apply to trip.");
+                }
+                return;
+            }
+
+            const result = await response.json();
+            console.log("Successfully applied to trip:", result);
+            alert("Successfully applied!");
+
+        } catch (error) {
+            console.error("Error applying to trip:", error);
+            alert("Something went wrong.");
+        }
+    };
+
     return (<div className="container">
         <h5>Name: {data?.name}</h5>
         <p>Start date: {data?.startDate}</p>
@@ -163,8 +248,8 @@ function PostBlock({props, data}) {
             props.setPopupData(data)
         }}>Expand</button>)}
 
-        {props.view === 'registered' && props.userType === 'user' && <button className='choice-btn' id="resing">Resign</button>}
-        {props.view === 'explore' && props.userType === 'user' && <button className='choice-btn' id="apply">Apply</button>}
+        {props.view === 'registered' && props.userType === 'user' && <button className='choice-btn' onClick={handleResign} id="resing">Resign</button>}
+        {props.view === 'explore' && props.userType === 'user' && <button className='choice-btn' onClick={handleApply} id="apply">Apply</button>}
         {props.userType === 'organiser' && <button className='choice-btn' onClick={() => {props.setPopup('view-users'); props.setPopupData(data.users)}}>Users</button>}
         {props.userType === 'organiser' && <button className='choice-btn' onClick={() => (props.setPopup('edit-trip'))}>Edit</button>}
         {props.userType === 'organiser' && <button className='choice-btn'
@@ -222,17 +307,13 @@ function Popup({
             <div className="popup-content">
                 {props.userType === 'user' && (<UserPostExpanded props={props}/>)}
                 {props.userType === 'organiser' && (<PopupManagement props={props}/>)}
-                {props.popup === 'expand' &&
+                {props.userType === 'user' && props.view === 'registered' &&
                     (<button className='choice-btn' id="apply" onClick={() => {
                         props.setView('announcements');
                         props.setPopup(null);
                     }}>See announcements</button>)}
                 {props.popup !== 'manage' && (<button className="choice-btn" onClick={() => {
                     props.setPopup(null);
-                    if (props.userType === 'user')
-                        props.setView('explore')
-                    else if (props.userType === 'organiser')
-                        props.setView('trips-created')
                 }}>Close</button>)}
 
 
@@ -284,6 +365,18 @@ function ManagementStateComponent({props}) {
         const id = e.target.value;
         setSelectedItem(id);
     };
+
+    useEffect(() => {
+        if (props.currentTouristService) {
+            if (props.currentTouristService.vehicleType) {
+                setSelectedItem('vehicle');
+            } else if (props.currentTouristService.hotelAddress) {
+                setSelectedItem('hotel');
+            }
+        }
+    }, [props.currentTouristService]);
+
+
     console.log(selectedItem)
     switch (props.managementState) {
         case 'manage-edit':
@@ -316,49 +409,45 @@ function ManagementStateComponent({props}) {
             props.setPopup(null)
             break;
         case 'add-list':
-            useEffect(() => { // dont work need to conditionaly so i would able to submit, because it is disabled
-                if (props.currentTouristService) {
-                    if (props.currentTouristService.vehicle) {
-                        setSelectedItem('vehicle');
-                    } else if (props.currentTouristService.hotel) {
-                        setSelectedItem('hotel');
-                    }
-                }
-            }, [props.currentTouristService])
-
+            console.log(props.currentTouristService)
             return (<div className="container-text">
-                {
-                    props.currentTouristService != null && Object.entries(props.currentTouristService).map(([key, value]) => {
-                    return (!Array.isArray(value) && (<div className="">{key}: <input className="" value={value}/></div>))})}
+                {props.currentTouristService == null && (
+                    <select onChange={handleAssign}>
+                        <option  value="">Select an item</option>
+                        <option key="hotel" value="hotel-create" >Hotel</option>
+                        <option key="vehicle" value="vehicle-create">Vehicle</option>
+                    </select>
+                )}
 
-                    {props.currentTouristService == null && (
-                        <select onChange={handleAssign}>
-                            <option  value="">Select an item</option>
-                            <option key="hotel" value="hotel" >Hotel</option>
-                            <option key="vehicle" value="vehicle">Vehicle</option>
-                        </select>
-                    )}
-
-                { selectedItem === 'hotel' &&
+                { selectedItem === 'hotel-create' &&
                     (props.hotelLayout.map((key, index) => {
-                    return (<div className="">{key}: <input className=""/></div>)}))
+                        return (<div className="">{key}: <input className=""/></div>)}))
                 }
-                { selectedItem === 'vehicle' &&
+
+                { selectedItem === 'vehicle-create' &&
                     (props.vehicleLayout.map((key, index) => {
                         return (<div className="">{key}: <input className=""/></div>)}))
                 }
+
+                {props.currentTouristService != null && Object.entries(props.currentTouristService).map(([key, value]) => {
+                    return (!Array.isArray(value) && (<div className="">{key}: <input className="" value={value}/></div>))})}
+
+
+
+
                 <button className="choice-btn" disabled={!selectedItem} onClick={() =>
                 {props.setManagementState('add-list-to-trip');}}>Submit</button>
             </div>)
         case 'add-list-to-trip': // hotel vehicle checker
             return (<div>
 
-                {selectedItem === 'vehicle' && (props.addVehicleToTripLayout?.map((key, index) => {
+                {(selectedItem === 'vehicle' || selectedItem === 'vehicle-create') && (props.addVehicleToTripLayout?.map((key, index) => {
                         return (<div className="">{key}: <input className=""/></div>)}))
                 }
-                {selectedItem === 'hotel' && (props.addHotelToTripLayout?.map((key, index) => {
+                {(selectedItem === 'hotel' || selectedItem === 'hotel-create') && (props.addHotelToTripLayout?.map((key, index) => {
                     return (<div className="">{key}: <input className=""/></div>)}))
                 }
+
                 <button onClick={() => {
                     setSelectedItem(null);
                     HandleTouristServiceManagementCompletion({props})
