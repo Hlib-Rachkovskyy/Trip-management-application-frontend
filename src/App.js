@@ -367,6 +367,12 @@ function HandleTouristServiceManagementCompletion({props}){
 function ViewUsers({props}) {
     const [selectedId, setSelectedId] = useState('');
     const [selected, setSelected] = useState(null);
+    const handleAssign = (e) => {
+        const id = e.target.value;
+        setSelectedId(id);
+        const selectedItem = props.popupData?.find(item => item.id.toString() === id);
+        setSelected(selectedItem);
+    };
     return (
         <div>
             <select value={selectedId} onChange={handleAssign}>
@@ -393,8 +399,8 @@ function ViewUsers({props}) {
                     ))}
                 </div>
             )}
-            { selected?.role === 'IsPartOfTour' && (<button onClick={() => { }}>Delete</button>)}
-            { selected?.role === 'Registered' && (<button className="choice-btn" onClick={() => { }}>Assign</button>)}
+            { selected?.role === 'IsPartOfTour' && (<button onClick={handleAssign}>Delete</button>)}
+            { selected?.role === 'Registered' && (<button className="choice-btn" onClick={handleAssign}>Assign</button>)}
 
         </div>
     );
