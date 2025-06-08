@@ -9,11 +9,18 @@ function App(){
     const [postData, setPostData] = useState([]);
     const [managementState, setManagementState] = useState(null); // add, edit, delete
     const [touristServices, setTouristServices] = useState([]);
-    const [currentTouristService, setCurrentTouristService] = useState({});
+    const [currentTouristService, setCurrentTouristService] = useState(null);
     const [currentTrip, setCurrentTrip] = useState({});
-
+    const [hotelLayout, setHotelLayout] = useState(["name", "phoneNumbers", "state", "hotelWebsite", "hotelAddress", "hotelEmail"]);
+    const [vehicleLayout, setVehicleLayout] = useState(["name", "phoneNumbers", "state", "vehicleType", "driverCompany"]);
+    const [addHotelToTripLayout, setAddHotelToTripLayout] = useState(["hotelStartDate", "hotelEndDate", "daysInHotel"]);
+    const [addVehicleToTripLayout, setAddVehicleToTripLayout] = useState(["startDate", "endDate", "startPoint"]);
     /* explore */
     const props = {
+        hotelLayout, setHotelLayout,
+        vehicleLayout, setVehicleLayout,
+        addHotelToTripLayout, setAddHotelToTripLayout,
+        addVehicleToTripLayout, setAddVehicleToTripLayout,
         view, setView,
         popupData, setPopupData,
         popup, setPopup,
@@ -80,7 +87,7 @@ function OrganiserHeader({props}) {
             <button className="choice-btn" onClick={() => props.setPopup('create-trip')}>Create trip</button>
             <button className="choice-btn" onClick={() => props.setView('trips-created')}>Trips</button>
             <button className="choice-btn" onClick={() => props.setView('form')}>View written forms</button>
-            {props.view === 'tourist-services' && (<h1>{props.touristServices.name}</h1>)}
+            {props.view === 'tourist-services' && (<h1 className='black'>{props.touristServices.name}</h1>)}
         </nav>
     </header>)
 
@@ -220,7 +227,13 @@ function Popup({
                         props.setView('announcements');
                         props.setPopup(null);
                     }}>See announcements</button>)}
-                {props.popup !== 'manage' && (<button className="choice-btn" onClick={() => {props.setPopup(null); props.setView('explore')}}>Close</button>)}
+                {props.popup !== 'manage' && (<button className="choice-btn" onClick={() => {
+                    props.setPopup(null);
+                    if (props.userType === 'user')
+                        props.setView('explore')
+                    else if (props.userType === 'organiser')
+                        props.setView('trips-created')
+                }}>Close</button>)}
 
 
             </div>
@@ -266,7 +279,12 @@ function PopupManagement({props}){
 }
 
 function ManagementStateComponent({props}) {
-    console.log(props.currentTouristService)
+    const [selectedItem, setSelectedItem] = useState(null);
+    const handleAssign = (e) => {
+        const id = e.target.value;
+        setSelectedItem(id);
+    };
+    console.log(selectedItem)
     switch (props.managementState) {
         case 'manage-edit':
             props.setManagementState('edit-list')
@@ -299,23 +317,45 @@ function ManagementStateComponent({props}) {
             break;
         case 'add-list':
             return (<div className="container-text">
-                {Object.entries(props.currentTouristService).map(([key, value]) => {
-                    return (!Array.isArray(value) && (<div className="">{key}: <input className="" value={value}/></div>))
-                })}
-                <button onClick={() =>
+                {
+                    props.currentTouristService != null && Object.entries(props.currentTouristService).map(([key, value]) => {
+                    return (!Array.isArray(value) && (<div className="">{key}: <input className="" value={value}/></div>))})}
+
+                    {props.currentTouristService == null && (
+                        <select onChange={handleAssign}>
+                            <option  value="">Select an item</option>
+                            <option key="hotel" value="hotel" >Hotel</option>
+                            <option key="vehicle" value="vehicle">Vehicle</option>
+                        </select>
+                    )}
+
+                { selectedItem === 'hotel' &&
+                    (props.hotelLayout.map((key, index) => {
+                    return (<div className="">{key}: <input className=""/></div>)}))
+                }
+                { selectedItem === 'vehicle' &&
+                    (props.vehicleLayout.map((key, index) => {
+                        return (<div className="">{key}: <input className=""/></div>)}))
+                }
+                <button className="choice-btn" onClick={() =>
                 {props.setManagementState('add-list-to-trip');}}>Submit</button>
             </div>)
         case 'add-list-to-trip': // hotel vehicle checker
             return (<div>
-                {Object.entries(props.currentTouristService).map(([key, value]) => {
-                    return (!Array.isArray(value) && (
-                        <div className="">{key}: <input className="" value={value}/></div>))
-                })}
+
+                {selectedItem === 'vehicle' && (props.addVehicleToTripLayout?.map((key, index) => {
+                        return (<div className="">{key}: <input className=""/></div>)}))
+                }
+                {selectedItem === 'hotel' && (props.addHotelToTripLayout?.map((key, index) => {
+                    return (<div className="">{key}: <input className=""/></div>)}))
+                }
                 <button onClick={() => {
+                    setSelectedItem(null);
                     HandleTouristServiceManagementCompletion({props})
                 }}>Submit
                 </button>
                 <button onClick={() => {
+                    setSelectedItem(null);
                     HandleTouristServiceManagementCompletion({props})
                 }}>Skip
                 </button>
@@ -361,7 +401,9 @@ function ManagementStateComponent({props}) {
 }
 
 function HandleTouristServiceManagementCompletion({props}){
-    props.setPopup(null); props.setManagementState(null); props.setView('trips-created')
+    props.setPopup(null); props.setManagementState(null);
+    props.setView('trips-created');
+    props.setCurrentTouristService(null);
 }
 
 function ViewUsers({props}) {
@@ -371,6 +413,7 @@ function ViewUsers({props}) {
         const id = e.target.value;
         setSelectedId(id);
         const selectedItem = props.popupData?.find(item => item.id.toString() === id);
+        console.log(props.popupData)
         setSelected(selectedItem);
     };
     return (
@@ -399,8 +442,8 @@ function ViewUsers({props}) {
                     ))}
                 </div>
             )}
-            { selected?.role === 'IsPartOfTour' && (<button onClick={handleAssign}>Delete</button>)}
-            { selected?.role === 'Registered' && (<button className="choice-btn" onClick={handleAssign}>Assign</button>)}
+            { selected?.role === 'IsPartOfTour' && (<button onClick={""}>Delete</button>)}
+            { selected?.role === 'Registered' && (<button className="choice-btn" onClick={"handleAssign"}>Assign</button>)}
 
         </div>
     );

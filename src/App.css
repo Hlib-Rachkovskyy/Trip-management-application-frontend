@@ -94,3 +94,7 @@ main h1 {
   padding: 10px;
   border: 1px solid #ccc;
 }
+
+.black {
+  color: black;
+}
