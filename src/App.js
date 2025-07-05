@@ -2,12 +2,13 @@ import {useEffect, useState} from "react";
 import './App.css';
 
 function App(){
-    const [userType, setUserType] = useState('option'); // user, organiser, manager,
-    const [view, setView] = useState('option'); //User: explore, registered, form, announcements, Organiser: create-tour, edit-tour, assign-organiser, trips-created, add-announcements
-    const [popupData, setPopupData] = useState(null); // expand, user-data, and start and end tourist services
+    const [currentUserId, setCurrentUserId] = useState(1);
+    const [userType, setUserType] = useState('option');
+    const [view, setView] = useState('option');
+    const [popupData, setPopupData] = useState(null);
     const [popup, setPopup] = useState(null);
     const [postData, setPostData] = useState([]);
-    const [managementState, setManagementState] = useState(null); // add, edit, delete
+    const [managementState, setManagementState] = useState(null);
     const [touristServices, setTouristServices] = useState([]);
     const [currentTouristService, setCurrentTouristService] = useState(null);
     const [currentTrip, setCurrentTrip] = useState({});
@@ -15,6 +16,7 @@ function App(){
     const [vehicleLayout, setVehicleLayout] = useState(["name", "phoneNumbers", "state", "vehicleType", "driverCompany"]);
     const [addHotelToTripLayout, setAddHotelToTripLayout] = useState(["hotelStartDate", "hotelEndDate", "daysInHotel"]);
     const [addVehicleToTripLayout, setAddVehicleToTripLayout] = useState(["startDate", "endDate", "startPoint"]);
+
 
     const props = {
         hotelLayout, setHotelLayout,
@@ -25,12 +27,12 @@ function App(){
         popupData, setPopupData,
         popup, setPopup,
         userType, setUserType,
-        currentPostExpanded: {Name: null},
         postData, setPostData,
         managementState, setManagementState,
         touristServices, setTouristServices,
         currentTouristService, setCurrentTouristService,
-        currentTrip, setCurrentTrip
+        currentTrip, setCurrentTrip,
+        currentUserId, setCurrentUserId
     }
 
     return (
@@ -59,71 +61,25 @@ function OptionHeader({props}){
         </header>)
 }
 
-function UserHeader({props}){
-    return (<header className="Header">
-        <nav>
-            <button className="choice-btn" onClick={() => props.setView('explore')}>Explore</button>
-            <button className="choice-btn" onClick={() => props.setView('registered')}>Trips on which is
-                registered
-            </button>
-            <button className="choice-btn" onClick={() => props.setView('form')}>Write to organiser
-            </button>
-        </nav>
-    </header>)
-}
 
-function ManagerHeader({props}){
-    return (<header className="Header">
-            <nav>
-                <button className="choice-btn" onClick={() => props.setView('explore')}>Explore</button>
-            </nav>
-        </header>
-    )
-}
 
-function OrganiserHeader({props}) {
-    return (<header className="Header">
-        <nav>
-            <button className="choice-btn" onClick={() => {props.setPopup('create-trip'); props.setManagementState(null)}}>Create trip</button>
-            <button className="choice-btn" onClick={() => {props.setView('trips-created'); props.setManagementState(null) }}>Trips</button>
-            <button className="choice-btn" onClick={() => {props.setView('form'); props.setManagementState(null)}}>View written forms</button>
-            {props.view === 'tourist-services' && (<h1 className='black'>You currently viewing tourist service for trip: {props.touristServices.name}</h1>)}
-        </nav>
-    </header>)
-
-}
-
-function FetchData(string){
-    const [data, setData] = useState([])
-    useEffect(() => {
-        fetch(string)
-            .then((response) => {
-                return response.json();
-            }).then((data) => {
-            setData(data)
-        }).catch((err) => console.error('API Error:', err));
-
-    }, []);
-    console.log(data)
-    return data;
-}
 
 function UserView({props}) {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     useEffect(() => {
-        let url;
+        let string;
         if (props.view === 'explore') {
-            url = 'http://localhost:8080/user/1/trips/explore';
+            string = 'http://localhost:8080/user/1/trips/explore';
         } else if (props.view === 'registered') {
-            url = 'http://localhost:8080/user/1/trips';
+            string = 'http://localhost:8080/user/1/trips';
         } else {
             setData([]);
             return;
         }
 
         setLoading(true);
-        fetch(url)
+        fetch(string)
             .then((res) => res.json())
             .then((data) => {
                 setData(data);
@@ -146,12 +102,31 @@ function UserView({props}) {
             return (<PostList props={props} data={data} />);
         case 'explore':
             return (<PostList props={props} data={data} />);
-
-
     }
-
-    return (<></>)
+    return <></>;
 }
+
+function OrganiserView({props}){
+    const [data, setData] = useState([]);
+
+    const fetchData = async () => {
+        const res = await fetch('http://localhost:8080/organiser/1/trips');
+        const json = await res.json();
+        setData(json);
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+    console.log(data)
+    switch (props.view) {
+        case 'trips-created':
+            return (<PostList props={{...props }} data={data}/>)
+        case 'tourist-services':
+            return (<TouristServices props={props}/>)
+    }
+}
+
 
 function ManagerView({props}){
     return (<>
@@ -159,17 +134,6 @@ function ManagerView({props}){
         {props.view === 'add-announcement' && (<AnnouncementsWriteOnly props={props}/>)}
 
     </>)
-}
-
-function OrganiserView({props}){
-    let data = FetchData('http://localhost:8080/organiser/1/trips')
-    console.log(data)
-    switch (props.view) {
-        case 'trips-created':
-            return (<PostList props={props} data={data}/>)
-        case 'tourist-services':
-            return (<TouristServices props={props}/>)
-    }
 }
 
 function PostList({props, data}){
@@ -183,13 +147,11 @@ function PostList({props, data}){
     )
 }
 
-
-
 function PostBlock({props, data}) {
 
     const handleResign = async () => {
         try {
-            const response = await fetch(`/user-trip/${props.tripId}/resign/${props.userId}`, {
+            const response = await fetch(`http://localhost:8080/user-trip/${data?.id}/resign/${props?.currentUserId}`, {
                 method: 'DELETE',
             });
 
@@ -200,9 +162,7 @@ function PostBlock({props, data}) {
             }
 
             alert("Successfully resigned from the trip.");
-
         } catch (err) {
-            console.error("Error resigning from trip:", err);
             alert("Error occurred while resigning.");
         }
     };
@@ -210,16 +170,17 @@ function PostBlock({props, data}) {
 
     const handleApply = async () => {
         try {
-            const response = await fetch(`/user-trip/${props.currentTripId}/apply/`, {
+            const response = await fetch(`http://localhost:8080/user-trip/apply`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
                     userId: props.currentUserId,
-                    tripId: props.currentTripId,
+                    tripId: data.id,
                 }),
             });
+
 
             if (!response.ok) {
                 if (response.status === 409) {
@@ -230,12 +191,9 @@ function PostBlock({props, data}) {
                 return;
             }
 
-            const result = await response.json();
-            console.log("Successfully applied to trip:", result);
             alert("Successfully applied!");
 
         } catch (error) {
-            console.error("Error applying to trip:", error);
             alert("Something went wrong.");
         }
     };
@@ -250,7 +208,7 @@ function PostBlock({props, data}) {
 
         {props.view === 'registered' && props.userType === 'user' && <button className='choice-btn' onClick={handleResign} id="resing">Resign</button>}
         {props.view === 'explore' && props.userType === 'user' && <button className='choice-btn' onClick={handleApply} id="apply">Apply</button>}
-        {props.userType === 'organiser' && <button className='choice-btn' onClick={() => {props.setPopup('view-users'); props.setPopupData(data.users)}}>Users</button>}
+        {props.userType === 'organiser' && <button className='choice-btn' onClick={() => {props.setPopup('view-users'); props.setPopupData(data)}}>Users</button>}
         {props.userType === 'organiser' && <button className='choice-btn' onClick={() => (props.setPopup('edit-trip'))}>Edit</button>}
         {props.userType === 'organiser' && <button className='choice-btn'
         onClick={() => { props.setPopup('manage'); props.setTouristServices(data); props.setView('tourist-services')}}>Manage</button>}
@@ -259,26 +217,92 @@ function PostBlock({props, data}) {
         {props.userType === 'manager' && <button className='choice-btn' onClick={() => (props.setView('add-announcement'))}>Write an announcement</button>}
 
         </div>)
-        } // make loader in future
+        }
 
 function UserPostExpanded({props}) {
     console.log(props.popupData)
 
     return (<div className="scrollableArea">{
-            Object.entries(props.popupData).map(([key, value]) => (!Array.isArray(value) && (
+            Object.entries(props.popupData).map(([key, value]) => (!Array.isArray(value) && key!== 'id' && (
                 <p>
                     <strong>{key}:</strong> {value?.toString()}
                 </p>)))}
         </div>)
 }
 
-function AssignManager({props}) {
-    const items = ['Item A', 'Item B', 'Item C'];
+function Popup({props}) {
+    let hasRegisteredUser= null
+    if (props.userType === 'user'){
+        hasRegisteredUser = props.popupData.users.some(
+        (userInTrip) =>
+            userInTrip.user.id === props.currentUserId && userInTrip.role === 'IsPartOfTrip'
+    );}
+
+
+    return (
+        <div className="popup">
+            <div className="popup-content">
+                {   props.userType === 'user' && (<UserPostExpanded props={props}/>)}
+                {   props.userType === 'organiser' && (<PopupManagement props={props}/>)}
+
+                {
+                    props.view === 'registered' &&
+                    hasRegisteredUser &&
+                    (<button className='choice-btn' id="apply" onClick={() => {
+                        props.setView('announcements');
+                        props.setPopup(null);
+                    }}>See announcements</button>)}
+
+                {   props.popup !== 'manage' &&
+                    (<button className="choice-btn" onClick={() => {
+                        props.setPopup(null);
+                    }}>Close</button>)}
+            </div>
+        </div>
+    );
+}
+
+function AssignManager({props, organiserData}) {
+    const [data, setData] = useState(null)
     const [selected, setSelected] = useState('');
 
-    const handleAssign = () => {
-        if (selected) {
-            console.log('Assigned:', selected);
+    const fetchData = async () => {
+        const res = await fetch(`http://localhost:8080/manager/${organiserData.company?.id}`, {});
+        const json = await res.json();
+        setData(json);
+    };
+    useEffect(() => {
+        fetchData();
+    }, []);
+    console.log(data)
+
+    const handleAssign = async () => {
+        try {
+            const response = await fetch(`http://localhost:8080/assign/manager`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    managerId: selected.id,
+                    tripId: data.id,
+                }),
+            });
+
+
+            if (!response.ok) {
+                if (response.status === 409) {
+                    alert("Manager was assigned.");
+                } else {
+                    alert("Failed to assign manager.");
+                }
+                return;
+            }
+
+            alert("Successfully applied!");
+
+        } catch (error) {
+            alert("Something went wrong.");
         }
     };
 
@@ -286,9 +310,11 @@ function AssignManager({props}) {
         <div>
             <select value={selected} onChange={(e) => setSelected(e.target.value)}>
                 <option value="">Select an item</option>
-                {items.map((item) => (
+                {data.map((item) => (
                     <option key={item} value={item}>
-                        {item}
+                        {item.name}
+                        <> </>
+                        {item.surname}
                     </option>
                 ))}
             </select>
@@ -299,51 +325,30 @@ function AssignManager({props}) {
     );
 }
 
-function Popup({
-                   props
-               }) {
-    return (
-        <div className="popup">
-            <div className="popup-content">
-                {props.userType === 'user' && (<UserPostExpanded props={props}/>)}
-                {props.userType === 'organiser' && (<PopupManagement props={props}/>)}
-                {props.userType === 'user' && props.view === 'registered' &&
-                    (<button className='choice-btn' id="apply" onClick={() => {
-                        props.setView('announcements');
-                        props.setPopup(null);
-                    }}>See announcements</button>)}
-                {props.popup !== 'manage' && (<button className="choice-btn" onClick={() => {
-                    props.setPopup(null);
-                }}>Close</button>)}
-
-
-            </div>
-        </div>
-    );
-}
-
 function PopupManagement({props}){
-    console.log(props.popup)
+    const [data, setData] = useState()
+    useEffect(() => {
+        fetch("http://localhost:8080/organiser/1")
+            .then((response) => {
+                return response.json();
+            }).then((data) => {
+            setData(data)
+        }).catch((err) => console.error('API Error:', err));
+
+    }, []);
     switch (props.popup) {
         case 'create-trip':
-            const data = FetchData('http://localhost:8080/organiser/1/trips/1')
-            return (<div className="container-text">
-                {Object.entries(data).map(([key, value]) => {
-                    return (!Array.isArray(value) && (<div className="">{key}: <input className=""/></div>))
-                })}
-                <button onClick={() => {props.setPopup('assign-manager')}}>Submit</button>
-            </div>)
+            return (<CreateTripForm props={props} data={data}/>)
         case 'assign-manager':
-            return (<AssignManager props={props}/>)
+            return (<AssignManager props={props} organiserData={data}/>)
         case 'edit-trip':
-            const editData = FetchData('http://localhost:8080/organiser/1/trips/1')
+            const editData = data.trips
             console.log(editData)
             return (<div className="container-text">
                 {Object.entries(editData).map(([key, value]) => {
                     return (!Array.isArray(value) && (<div className="">{key}: <input className=""/></div>))
                 })}
                 <button onClick={() => {
-
                 }}>Submit
                 </button>
                 <button onClick={() => {
@@ -357,6 +362,81 @@ function PopupManagement({props}){
         case 'manage': // add tour
             return (<ManagementStateComponent props={props}/>)
      }
+}
+
+function CreateTripForm({props, data}) {
+
+    const [form, setForm] = useState({
+        name: '',
+        registrationDateEnd: '',
+        departurePoint: '',
+        arrivalPoint: '',
+        startDate: '',
+        endDate: '',
+        programDescription: '',
+        numberOfUsersInGroup: '',
+        price: '',
+        registrationState: ''
+    });
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setForm(f => ({ ...f, [name]: value }));
+    };
+
+    const handleSubmit = async () => {
+        try {
+            const response = await fetch('http://localhost:8080/organiser/trips', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: form.name,
+                    registrationDateEnd: form.registrationDateEnd,
+                    departurePoint: form.departurePoint,
+                    arrivalPoint: form.arrivalPoint,
+                    startDate: form.startDate,
+                    endDate: form.endDate,
+                    programDescription: form.programDescription,
+                    numberOfUsersInGroup: Number(form.numberOfUsersInGroup),
+                    price: Number(form.price),
+                    registrationState: form.registrationState,
+                    companyId: Number(data.company?.id),
+                    organiserId: data.id,
+                })
+            });
+
+            if (!response.ok) {
+                const msg = await response.text();
+                alert('Error: ' + msg);
+                return;
+            }
+            alert('Trip saved successfully');
+            props.setPopup('assign-manager');
+        } catch (err) {
+            console.error(err);
+            alert('Submission failed');
+        }
+    };
+
+    return (
+        <div className="container-text">
+            {Object.entries(form).map(([key, val]) => (
+                <div key={key}>
+                    <label>
+                        {key}:
+                        <input
+                            name={key}
+                            value={val}
+                            onChange={handleChange}
+                        />
+                    </label>
+                </div>
+            ))}
+            <button className="choice-btn" onClick={handleSubmit}>
+                Submit
+            </button>
+        </div>
+    );
 }
 
 function ManagementStateComponent({props}) {
@@ -438,7 +518,7 @@ function ManagementStateComponent({props}) {
                 <button className="choice-btn" disabled={!selectedItem} onClick={() =>
                 {props.setManagementState('add-list-to-trip');}}>Submit</button>
             </div>)
-        case 'add-list-to-trip': // hotel vehicle checker
+        case 'add-list-to-trip':
             return (<div>
 
                 {(selectedItem === 'vehicle' || selectedItem === 'vehicle-create') && (props.addVehicleToTripLayout?.map((key, index) => {
@@ -511,17 +591,68 @@ function ViewUsers({props}) {
     const handleAssign = (e) => {
         const id = e.target.value;
         setSelectedId(id);
-        const selectedItem = props.popupData?.find(item => item.id.toString() === id);
-        console.log(props.popupData)
+        const selectedItem = props.popupData.users?.find(item => item.id.toString() === id);
         setSelected(selectedItem);
     };
+
+    const handleResign = async () => {
+        try {
+            const response = await fetch(`http://localhost:8080/user-trip/${props.popupData.id}/resign/${selected.id}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                const message = await response.text();
+                alert("Failed: " + message);
+                return;
+            }
+
+            alert("Successfully resigned from the trip.");
+        } catch (err) {
+            alert("Error occurred while resigning.");
+        }
+    };
+
+
+    const handleAssignToTrip = async () => {
+        try {
+            const response = await fetch(`http://localhost:8080/user-trip/assign`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    userId: selected.id,
+                    tripId: props.popupData.id,
+                    role: 'IsPartOfTrip'
+                }),
+            });
+
+
+            if (!response.ok) {
+                if (response.status === 409) {
+                    alert("You are already registered for this trip.");
+                } else {
+                    alert("Failed to apply to trip.");
+                }
+                return;
+            }
+
+            alert("Successfully applied!");
+
+        } catch (error) {
+            alert("Something went wrong.");
+        }
+    };
+
     return (
         <div>
             <select value={selectedId} onChange={handleAssign}>
                 <option value="">Select an item</option>
-                {props.popupData?.map((item) => (
+                {props.popupData.users?.map((item) => (
                     <option key={item.id} value={item.id}>
                         {item.user.name}
+                        <> </>
                         {item.user.surname}
                     </option>
                 ))}
@@ -541,8 +672,8 @@ function ViewUsers({props}) {
                     ))}
                 </div>
             )}
-            { selected?.role === 'IsPartOfTour' && (<button onClick={""}>Delete</button>)}
-            { selected?.role === 'Registered' && (<button className="choice-btn" onClick={"handleAssign"}>Assign</button>)}
+            { selected?.role === 'isPartOfTrip' && (<button className="choice-btn" onClick={handleResign}>Delete</button>)}
+            { selected?.role === 'Registered' && (<button className="choice-btn" onClick={handleAssignToTrip}>Assign to trip</button>)}
 
         </div>
     );
@@ -569,20 +700,71 @@ function AnnouncementsReadOnly({
     )
 }
 
-function FormPage({
-    props
-}) {
-    return (<div className='form-container'>
-        <label htmlFor="company">Choose a company:</label>
-        <select className='select-container' id="company" name="company">
-            <option value="company1">company1</option>
-            <option value="company2">company2</option>
-            <option value="company3">company3</option>
-        </select>
-        <label htmlFor="fname">Text:</label>
-        <input className='input-container' type="text" id="form" name="form"/><br/><br/>
-        <button className="submit">Submit</button>
-    </div>)
+function FormPage({ props }) {
+    const [company, setCompany] = useState('');
+    const [text, setText] = useState('');
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        const payload = {
+            companyName: company,
+            text: text,
+            userId: props.userId
+        };
+
+        try {
+            const res = await fetch('/contact-form/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                alert('Form submitted successfully.');
+                setCompany('');
+                setText('');
+            } else {
+                const msg = await res.text();
+                alert('Error: ' + msg);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Something went wrong.');
+        }
+    };
+
+    return (
+        <form className='form-container' onSubmit={handleSubmit}>
+            <label htmlFor="company">Choose a company:</label>
+            <select
+                className='select-container'
+                id="company"
+                name="company"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                required
+            >
+                <option value="">--Select--</option>
+                <option value="company1">company1</option>
+                <option value="company2">company2</option>
+                <option value="company3">company3</option>
+            </select>
+
+            <label htmlFor="form">Text:</label>
+            <input
+                className='input-container'
+                type="text"
+                id="form"
+                name="form"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                required
+            />
+            <br /><br />
+            <button className="submit" type="submit">Submit</button>
+        </form>
+    );
 }
 
 function AnnouncementsWriteOnly({ props }) {
@@ -613,7 +795,7 @@ function TouristServices({ props }){
     )
 }
 
-function TouristServicesList({ props }) { // current post to make (make showup which edited)
+function TouristServicesList({ props }) {
     return (
         <div className="container-list">
             {props.touristServices.vehiclesInTrip?.map((vehicle, index) =>
@@ -641,7 +823,7 @@ function TouristServiceBlock({ props, data }){
 
 
 
-// hotel and vehicle make
+
     return (<div className="container" onClick={() =>
     {isVehicle && props.setCurrentTouristService(data.vehicle);
         isHotel && props.setCurrentTouristService(data.hotel);
