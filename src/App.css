@@ -1,7 +1,7 @@
 .App {
   text-align: center;
   background: #FFFFFF;
-  height: 100vh;
+  min-height: 100vh;
 }
 
 .Header {
@@ -17,6 +17,7 @@
 }
 
 .choice-btn {
+  padding: 2px;
   font-size: 30px;
   background-color: #0F172A;
   border-radius: 5px;
@@ -37,16 +38,37 @@ main h1 {
   display: flow;
 }
 
+.select-container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
 .container {
   background-color: #F8FAFC;
   border-radius: 10px;
   box-shadow: 2px 2px 4px #888888;
   margin: 20px;
   width: 400px;
-  height: 175px;
+  min-height: 175px;
   border-color: #CBD5E1;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.container-content {
+  padding: 15px;
+  flex-grow: 1;
+}
+
+.container-buttons {
+  padding: 10px 15px 15px 15px;
+  border-top: 1px solid #E2E8F0;
+  background-color: #F1F5F9;
+  border-radius: 0 0 10px 10px;
 }
 
 .container-list {
@@ -84,7 +106,7 @@ main h1 {
 }
 
 .input-container {
-  width: 200px;
+  width: 400px;
   height: 200px;
 }
 
@@ -97,4 +119,432 @@ main h1 {
 
 .black {
   color: black;
+}
+.announcements {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.announcement-block {
+  width: 100%;
+  height: 100%;
+  overflow-wrap: break-word;
+  background-color: #F8FAFC;
+  border-radius: 10px;
+
+  margin-bottom: 10px;
+  padding: 10px;
+
+  box-sizing: border-box;
+  border: solid 1px black;
+}
+
+.announcement-block .writer-name {
+  font-size: 30px;
+  text-align: left;
+  padding-bottom: 10px;
+}
+.announcement-block .writer-text {
+}
+
+/* New styles for enhanced functionality */
+.contact-forms-list {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.contact-form-item {
+  background-color: #F8FAFC;
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 15px;
+  border: 1px solid #CBD5E1;
+}
+
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.form-date {
+  color: #64748B;
+  font-size: 14px;
+}
+
+.form-content {
+  margin-bottom: 10px;
+}
+
+.form-actions {
+  text-align: right;
+}
+
+.announcement-form {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.tourist-service-block {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.tourist-service-block:hover {
+  transform: translateY(-2px);
+}
+
+.service-details {
+  margin-top: 10px;
+  font-size: 14px;
+  color: #64748B;
+}
+
+.manager-details {
+  text-align: left;
+}
+
+.manager-info p {
+  margin: 8px 0;
+}
+
+.manager-popup-content {
+  max-width: 600px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.users-section, .services-section {
+  margin-bottom: 20px;
+}
+
+.user-item, .service-item {
+  background-color: #F8FAFC;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 10px;
+  border: 1px solid #CBD5E1;
+}
+
+.service-actions {
+  margin-top: 10px;
+}
+
+.service-actions button {
+  margin-right: 10px;
+  font-size: 14px;
+  padding: 5px 10px;
+}
+
+.trip-manager-info {
+  background-color: #F8FAFC;
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 20px;
+  border: 1px solid #CBD5E1;
+}
+
+.announcement-header {
+  margin-bottom: 10px;
+}
+
+.announcement-date {
+  color: #64748B;
+  font-size: 14px;
+}
+
+.announcement-text {
+  line-height: 1.5;
+}
+
+/* New styles for association-based components */
+.user-view, .organiser-view, .manager-view {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.trips-section, .explore-section {
+  margin: 20px 0;
+}
+
+.trip-card {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 10px 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.trip-card h4 {
+  margin: 0 0 10px 0;
+  color: #495057;
+}
+
+.trip-card p {
+  margin: 5px 0;
+  color: #6c757d;
+}
+
+.announcements-readonly {
+  padding: 20px;
+}
+
+.manager-info {
+  background: #e3f2fd;
+  border: 1px solid #bbdefb;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 15px 0;
+}
+
+.announcements-list {
+  margin-top: 20px;
+}
+
+.announcement-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 12px;
+  margin: 10px 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.announcement-date {
+  font-size: 0.9em;
+  color: #666;
+  margin: 0 0 8px 0;
+}
+
+.announcement-content {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.contact-forms {
+  padding: 20px;
+}
+
+.contact-form-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 15px 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-header {
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+}
+
+.form-header p {
+  margin: 5px 0;
+  font-size: 0.9em;
+  color: #666;
+}
+
+.form-content {
+  margin: 10px 0;
+}
+
+.announcements-write {
+  padding: 20px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.announcement-form {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #495057;
+}
+
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.btn-primary {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #0056b3;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #545b62;
+}
+
+.manager-popup-content {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.users-section, .services-section {
+  margin-bottom: 20px;
+}
+
+.user-item, .service-item {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 12px;
+  margin: 10px 0;
+}
+
+.service-actions {
+  margin-top: 10px;
+}
+
+.service-actions button {
+  margin-right: 10px;
+}
+
+.tourist-service-block {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.tourist-service-block:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.service-details {
+  margin-top: 10px;
+  font-size: 0.9em;
+  color: #666;
+}
+
+.service-details p {
+  margin: 3px 0;
+}
+
+/* Status colors */
+.status-active {
+  color: #28a745;
+}
+
+.status-pending {
+  color: #ffc107;
+}
+
+.status-inactive {
+  color: #6c757d;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .user-view, .organiser-view, .manager-view {
+    padding: 10px;
+  }
+  
+  .trip-card {
+    padding: 10px;
+  }
+  
+  .announcement-form {
+    padding: 15px;
+  }
+}
+
+.management-state {
+  padding: 20px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.service-info {
+  background-color: #F8FAFC;
+  padding: 15px;
+  border-radius: 8px;
+  margin: 15px 0;
+  border: 1px solid #E2E8F0;
+}
+
+.service-info h4 {
+  margin-top: 0;
+  color: #1E293B;
+}
+
+.service-info p {
+  margin: 8px 0;
+  color: #475569;
+}
+
+.status-management {
+  margin: 20px 0;
+}
+
+.status-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+
+.status-buttons .choice-btn {
+  flex: 1;
+  min-width: 120px;
+}
+
+.status-buttons .choice-btn:disabled {
+  background-color: #94A3B8;
+  cursor: not-allowed;
 }

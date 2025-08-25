@@ -7,15 +7,15 @@ export function OrganiserHeader({props}) {
         <nav>
             <button className="choice-btn" onClick={() => {
                 props.setPopup('create-trip');
-                props.setManagementState(null)}
+                }
             }>Create trip</button>
             <button className="choice-btn" onClick={() => {
                 props.setView('trips-created');
-                props.setManagementState(null) }
+                }
             }>Trips</button>
             <button className="choice-btn" onClick={() => {
                 props.setView('form');
-                props.setManagementState(null)}
+                }
             }>View written forms</button>
             {props.view === 'tourist-services' &&
                 (<h1 className='black'>You currently viewing tourist service for trip: {props.touristServices.name}</h1>)}
@@ -25,32 +25,94 @@ export function OrganiserHeader({props}) {
 }
 
 export function OrganiserView({props}){
-    const [data, setData] = useState([]);
-
-    const fetchData = async () => {
-        const res = await fetch('http://localhost:8080/organiser/1/trips');
-        const json = await res.json();
-        setData(json);
-    };
+    const [organiserData, setOrganiserData] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        const fetchData = async () => {
+            try {
+                // Get organiser with their trips using associations
+                const response = await fetch('/organiser/1/trips');
+                const organiser = await response.json();
+                console.log('Organiser data:', organiser);
+                setOrganiserData(organiser);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         fetchData();
-    }, []);
-    console.log(data)
+    }, [props.blockStateOrganiser]);
+
+    if (loading) return <div>Loading...</div>;
+
+    console.log('Organiser view - props.view:', props.view);
+    console.log('Organiser view - organiserData:', organiserData);
+
     switch (props.view) {
         case 'trips-created':
-            return (<PostList props={{...props }} data={data}/>)
+            return <PostList props={props} data={organiserData?.trips || []} />;
+        case 'form':
+            return <ViewWrittenForms props={props} />;
         case 'tourist-services':
-            return (<TouristServices props={props}/>)
+            return <TouristServices props={props} />;
+        default:
+            return <PostList props={props} data={organiserData?.trips || []} />;
     }
 }
 
-export function PopupManagement({props}){
+export function ViewWrittenForms({props}) {
+    const [companyData, setCompanyData] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                // Get organiser's company with contact forms using associations
+                const response = await fetch('/organiser/1/contact-forms');
+                const company = await response.json();
+                console.log('Contact forms data:', company);
+                setCompanyData(company);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [props.blockStateOrganiser]);
+
+    if (loading) return <div>Loading...</div>;
+
+    console.log('ViewWrittenForms - companyData:', companyData);
+
+    return (
+        <div className="contact-forms">
+            <h3>Contact Forms</h3>
+            {companyData?.contactForms?.map(form => (
+                <div key={form.id} className="contact-form-card">
+                    <div className="form-header">
+                        <p><strong>From:</strong> {form.user?.name} {form.user?.surname}</p>
+                        <p><strong>Date:</strong> {form.sendDate}</p>
+                    </div>
+                    <div className="form-content">
+                        <p>{form.text}</p>
+                    </div>
+                </div>
+            )) || <p>No contact forms yet</p>}
+        </div>
+    );
+}
+
+export function OrganiserPopupExpanded({props}){
     const [data, setData] = useState()
 
     const getOrganiserData = async () => {
         try {
-            let organiser_data = await fetch('http://localhost:8080/organiser/1');
+            let organiser_data = await fetch('/organiser/test');
             let jsonData = await organiser_data.json()
             setData(jsonData)
         } catch (err) {
@@ -92,7 +154,25 @@ export function PopupManagement({props}){
             return <ViewUsers props={props}/>
         case 'manage': // add tour
             return (<ManagementStateComponent props={props}/>)
+        default:
+            return null;
     }
+}
+
+export function OrganiserPostBlockInteraction({props, data}) {
+    return (<>
+            <button className='choice-btn' onClick={() => {
+                props.setPopup('view-users');
+                props.setPopupData(data)
+            }}>Users</button>
+            <button className='choice-btn' onClick={() => (props.setPopup('edit-trip'))}>Edit</button>
+            <button className='choice-btn' onClick={() => {
+                props.setPopup('manage');
+                props.setCurrentTouristService(null); // Reset current tourist service
+                props.setView('tourist-services')
+            }}>Manage</button>
+        </>
+    )
 }
 
 function AssignManager({props, organiserData}) {
@@ -100,7 +180,7 @@ function AssignManager({props, organiserData}) {
     const [selected, setSelected] = useState('');
 
     const fetchData = async () => {
-        const res = await fetch(`http://localhost:8080/manager/${organiserData.company?.id}`, {});
+        const res = await fetch(`/manager/${organiserData.company?.id}`, {});
         const json = await res.json();
         setData(json);
     };
@@ -111,7 +191,7 @@ function AssignManager({props, organiserData}) {
 
     const handleAssign = async () => {
         try {
-            const response = await fetch(`http://localhost:8080/assign/manager`, {
+            const response = await fetch(`/assign/manager`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -159,150 +239,120 @@ function AssignManager({props, organiserData}) {
 }
 
 function ManagementStateComponent({props}) {
-    const [selectedItem, setSelectedItem] = useState(null);
-    const handleAssign = (e) => {
-        const id = e.target.value;
-        setSelectedItem(id);
-    };
+    const [currentTouristService, setCurrentTouristService] = useState(null);
 
     useEffect(() => {
+        // Get the current tourist service from props
         if (props.currentTouristService) {
-            if (props.currentTouristService.vehicleType) {
-                setSelectedItem('vehicle');
-            } else if (props.currentTouristService.hotelAddress) {
-                setSelectedItem('hotel');
-            }
+            setCurrentTouristService(props.currentTouristService);
         }
     }, [props.currentTouristService]);
 
+    const handleStatusChange = async (newStatus) => {
+        if (!newStatus || !currentTouristService) return;
+        
+        try {
+            const response = await fetch(`/tourist-service/${currentTouristService.id}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
 
-    console.log(selectedItem)
-    switch (props.managementState) {
-        case 'manage-edit':
-            props.setManagementState('edit-list')
-            props.setPopup(null)
-            break;
-        case 'edit-list':
-            return (<div className="container-text">
-                {Object.entries(props.currentTouristService).map(([key, value]) => {
-                    return (!Array.isArray(value) && (<div className="">{key}: <input className="" value={value}/></div>))
-                })}
-                <button onClick={() =>
-                {
-                    HandleTouristServiceManagementCompletion({props})
-                }}>Submit</button>
-            </div>)
-        case 'manage-add':
-            return (<div className="container-text">
-                <button className="choice-btn" onClick={() => {
-                    props.setManagementState('add-list');
-                }}>Add new
-                </button>
-                <button className="choice-btn" onClick={() => {
-                    props.setManagementState('add-copy')
-                }}>Add new as copy
-                </button>
-            </div>);
-        case 'add-copy':
-            props.setManagementState('add-list')
-            props.setPopup(null)
-            break;
-        case 'add-list':
-            console.log(props.currentTouristService)
-            return (<div className="container-text">
-                {props.currentTouristService == null && (
-                    <select onChange={handleAssign}>
-                        <option  value="">Select an item</option>
-                        <option key="hotel" value="hotel-create" >Hotel</option>
-                        <option key="vehicle" value="vehicle-create">Vehicle</option>
-                    </select>
-                )}
-
-                { selectedItem === 'hotel-create' &&
-                    (props.hotelLayout.map((key, index) => {
-                        return (<div className="">{key}: <input className=""/></div>)}))
+            if (response.ok) {
+                alert('Status updated successfully!');
+                // Refresh the data
+                if (props.setBlockStateOrganiser) {
+                    props.setBlockStateOrganiser(!props.blockStateOrganiser);
                 }
+                props.setPopup(null);
+            } else {
+                const error = await response.text();
+                alert('Error: ' + error);
+            }
+        } catch (error) {
+            console.error('Error updating status:', error);
+            alert('Failed to update status');
+        }
+    };
 
-                { selectedItem === 'vehicle-create' &&
-                    (props.vehicleLayout.map((key, index) => {
-                        return (<div className="">{key}: <input className=""/></div>)}))
-                }
-
-                {props.currentTouristService != null && Object.entries(props.currentTouristService).map(([key, value]) => {
-                    return (!Array.isArray(value) && (<div className="">{key}: <input className="" value={value}/></div>))})}
-
-
-
-
-                <button className="choice-btn" disabled={!selectedItem} onClick={() =>
-                {props.setManagementState('add-list-to-trip');}}>Submit</button>
-            </div>)
-        case 'add-list-to-trip':
-            return (<div>
-
-                {(selectedItem === 'vehicle' || selectedItem === 'vehicle-create') && (props.addVehicleToTripLayout?.map((key, index) => {
-                    return (<div className="">{key}: <input className=""/></div>)}))
-                }
-                {(selectedItem === 'hotel' || selectedItem === 'hotel-create') && (props.addHotelToTripLayout?.map((key, index) => {
-                    return (<div className="">{key}: <input className=""/></div>)}))
-                }
-
-                <button onClick={() => {
-                    setSelectedItem(null);
-                    HandleTouristServiceManagementCompletion({props})
-                }}>Submit
-                </button>
-                <button onClick={() => {
-                    setSelectedItem(null);
-                    HandleTouristServiceManagementCompletion({props})
-                }}>Skip
-                </button>
-            </div>)
-        case 'manage-delete':
-            return (<div>
-                <h3>From where do you want delete this service</h3>
-                <button className="choice-btn" onClick={() => {
-                    props.setManagementState('delete-from-trip');
-                    props.setPopup(null)
-                }}>Trip
-                </button>
-                <button className="choice-btn" onClick={() => {props.setManagementState('delete-choice'); props.setPopup(null)}}>System</button>
-            </div>);
-        case 'delete-from-trip':
-            return (<div>
-                <h3>Choose tour from which trip do you want delete service</h3>
-                <select>
-                    <option>A</option>
-                </select>
-                <button className="choice-btn" onClick={() => {props.setManagementState('delete-choice')}}>Delete</button>
-            </div>);
-        case 'delete-choice':
-            return (<div>
-                <h3>Are you sure that you want to delete?</h3>
-                <button className="choice-btn" onClick={() => {
-                    HandleTouristServiceManagementCompletion({props})
-                }}>Yes
-                </button>
-                <button className="choice-btn" onClick={() => {
-                    HandleTouristServiceManagementCompletion({props})
-                }}>No
-                </button>
-            </div>);
-        default:
-            return (<div>
-                <h3>Trip manager for tour {}</h3>
-                <button className="choice-btn" onClick={() => { props.setManagementState('manage-add');}}>Add</button>
-                <button className="choice-btn" onClick={() => { props.setManagementState('manage-edit')}}>Edit</button>
-                <button className="choice-btn" onClick={() => { props.setManagementState('manage-delete');}}>Delete</button>
-            </div>);
+    if (!currentTouristService) {
+        return (
+            <div className="management-state">
+                <h3>Tourist Service Management</h3>
+                <p>No tourist service selected.</p>
+                <button className="choice-btn" onClick={() => props.setPopup(null)}>Close</button>
+            </div>
+        );
     }
+
+    const isVehicle = !!currentTouristService.vehicleType;
+    const isHotel = !!currentTouristService.hotelAddress;
+
+    return (
+        <div className="management-state">
+            <h3>Manage Tourist Service</h3>
+            
+            <div className="service-info">
+                <h4>{currentTouristService.name}</h4>
+                <p><strong>Type:</strong> {isVehicle ? 'Vehicle' : isHotel ? 'Hotel' : 'Unknown'}</p>
+                <p><strong>Current Status:</strong> {currentTouristService.state}</p>
+                <p><strong>Phone:</strong> {currentTouristService.phoneNumbers}</p>
+                
+                {isVehicle && (
+                    <>
+                        <p><strong>Vehicle Type:</strong> {currentTouristService.vehicleType}</p>
+                        {currentTouristService.driverCompany && (
+                            <p><strong>Driver Company:</strong> {currentTouristService.driverCompany}</p>
+                        )}
+                    </>
+                )}
+                
+                {isHotel && (
+                    <>
+                        <p><strong>Address:</strong> {currentTouristService.hotelAddress}</p>
+                        {currentTouristService.hotelWebsite && (
+                            <p><strong>Website:</strong> {currentTouristService.hotelWebsite}</p>
+                        )}
+                        {currentTouristService.hotelEmail && (
+                            <p><strong>Email:</strong> {currentTouristService.hotelEmail}</p>
+                        )}
+                    </>
+                )}
+            </div>
+
+            <div className="status-management">
+                <h4>Update Status</h4>
+                <div className="status-buttons">
+                    <button 
+                        className="choice-btn" 
+                        onClick={() => handleStatusChange('Bez Wyjazdu')}
+                        disabled={currentTouristService.state === 'Bez Wyjazdu'}
+                    >
+                        Bez Wyjazdu
+                    </button>
+                    <button 
+                        className="choice-btn" 
+                        onClick={() => handleStatusChange('Dodany Do Wyjazdu')}
+                        disabled={currentTouristService.state === 'Dodany Do Wyjazdu'}
+                    >
+                        Dodany Do Wyjazdu
+                    </button>
+                    <button 
+                        className="choice-btn" 
+                        onClick={() => handleStatusChange('W trakcie')}
+                        disabled={currentTouristService.state === 'W trakcie'}
+                    >
+                        W trakcie
+                    </button>
+                </div>
+            </div>
+
+            <button className="choice-btn" onClick={() => props.setPopup(null)}>Close</button>
+        </div>
+    );
 }
 
-function HandleTouristServiceManagementCompletion({props}){
-    props.setPopup(null); props.setManagementState(null);
-    props.setView('trips-created');
-    props.setCurrentTouristService(null);
-}
+
 
 
 
@@ -328,7 +378,7 @@ export function CreateTripForm({props, data}) {
 
     const handleSubmit = async () => {
         try {
-            const response = await fetch('http://localhost:8080/organiser/trips', {
+            const response = await fetch('/organiser/trips', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

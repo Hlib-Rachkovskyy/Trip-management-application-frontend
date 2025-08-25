@@ -1,157 +1,94 @@
 import {useEffect, useState} from "react";
-import {PopupManagement} from "./Users/TripOrganiser";
+import {OrganiserPostBlockInteraction, OrganiserPopupExpanded} from "./Users/TripOrganiser";
+import {UserPostBlockInteraction, UserPostExpanded} from "./Users/User";import {ManagerPopupExpanded, ManagerPostBlockInteraction} from "./Users/Manager";
 
-export function FetchData(string){
-    const [data, setData] = useState([])
-    useEffect(() => {
-        fetch(string)
-            .then((response) => {
-                return response.json();
-            }).then((data) => {
-            setData(data)
-        }).catch((err) => console.error('API Error:', err));
-
-    }, []);
-    console.log(data)
-    return data;
-}
 
 
 export function PostList({props, data}){
-    console.log(data)
+    let tripsToDisplay = [];
+    
+    if (Array.isArray(data)) {
+        tripsToDisplay = data;
+    } else if (data?.trips) {
+        tripsToDisplay = data.trips;
+    } else if (data?.userInTripList) {
+        tripsToDisplay = data.userInTripList.map(uit => ({
+            ...uit.trip,
+            userInTrip: uit
+        }));
+    } else {
+        tripsToDisplay = [];
+    }
+
     return (
         <div className="container-list">
-            {Array.isArray(data) && data?.map((value) =>
-                (<PostBlock props={props} data={value}/>)
+            {tripsToDisplay.map((value) =>
+                (<PostBlock key={value.id} props={props} data={value}/>)
             )}
         </div>
     )
 }
 
 export function PostBlock({props, data}) {
-
-    const handleResign = async () => {
-        try {
-            const response = await fetch(`http://localhost:8080/user-trip/${data?.id}/resign/${props?.currentUserId}`, {
-                method: 'DELETE',
-            });
-
-            if (!response.ok) {
-                const message = await response.text();
-            //    alert("Failed: " + message);
-                return;
-            }
-
-          //  alert("Successfully resigned from the trip.");
-            props.setBlockStateUser(!props.blockStateUser)
-
-        } catch (err) {
-         //   alert("Error occurred while resigning.");
-        }
-    };
-
-
-    const handleApply = async () => {
-        try {
-            const response = await fetch(`http://localhost:8080/user-trip/apply`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    userId: props.currentUserId,
-                    tripId: data.id,
-                }),
-            });
-
-
-            if (!response.ok) {
-                if (response.status === 409) {
-                    alert("You are already registered for this trip.");
-                } else {
-                    alert("Failed to apply to trip.");
-                }
-                return;
-            }
-
-            alert("Successfully applied!");
-            props.setBlockStateUser(!props.blockStateUser)
-
-        } catch (error) {
-            alert("Something went wrong.");
-        }
-    };
-
-    return (<div className="container">
-        <h5>Name: {data?.name}</h5>
-        <p>Start date: {data?.startDate}</p>
-        {props.userType === 'user' && (<button className='choice-btn' onClick={() => {
-            props.setPopup('expand');
-            props.setPopupData(data)
-        }}>Expand</button>)}
-
-        {props.view === 'registered' && props.userType === 'user' && <button className='choice-btn' onClick={handleResign} id="resing">Resign</button>}
-        {props.view === 'explore' && props.userType === 'user' && <button className='choice-btn' onClick={handleApply} id="apply">Apply</button>}
-        {props.userType === 'organiser' && <button className='choice-btn' onClick={() => {props.setPopup('view-users'); props.setPopupData(data)}}>Users</button>}
-        {props.userType === 'organiser' && <button className='choice-btn' onClick={() => (props.setPopup('edit-trip'))}>Edit</button>}
-        {props.userType === 'organiser' && <button className='choice-btn'
-                                                   onClick={() => { props.setPopup('manage'); props.setTouristServices(data); props.setView('tourist-services')}}>Manage</button>}
-
-
-        {props.userType === 'manager' && <button className='choice-btn' onClick={() => (props.setView('add-announcement'))}>Write an announcement</button>}
-
-    </div>)
+    return (
+        <div className="container">
+            <div className="container-content">
+                <h5>Name: {data?.name}</h5>
+                <p>Start date: {data?.startDate}</p>
+                <p>End date: {data?.endDate}</p>
+                <p>Price: ${data?.price}</p>
+                {data?.company && <p>Company: {data.company.name}</p>}
+            </div>
+            <div className="container-buttons">
+                {props.userType === 'user' && <UserPostBlockInteraction props={props} data={data}/>}
+                {props.userType === 'organiser' && <OrganiserPostBlockInteraction props={props} data={data}/>}
+                {props.userType === 'manager' && <ManagerPostBlockInteraction props={props} data={data}/>}
+            </div>
+        </div>)
 }
 
-export function UserPostExpanded({props}) {
-    console.log(props.popupData)
 
-    return (<div className="scrollableArea">{
-        Object.entries(props.popupData).map(([key, value]) => (!Array.isArray(value) && key!== 'id' && (
-            <p>
-                <strong>{key}:</strong> {value?.toString()}
-            </p>)))}
-    </div>)
-}
+
 
 export function Popup({props}) {
-    let hasRegisteredUser= null
-    if (props.userType === 'user'){
-        hasRegisteredUser = props.popupData.users.some(
-            (userInTrip) =>
-                userInTrip.user.id === props.currentUserId && userInTrip.role === 'IsPartOfTrip'
-        );}
-
-
     return (
         <div className="popup">
             <div className="popup-content">
-                {   props.userType === 'user' && (<UserPostExpanded props={props}/>)}
-                {   props.userType === 'organiser' && (<PopupManagement props={props}/>)}
+                {   props.userType === 'user' && props.popup === 'expand' && (<UserPostExpanded props={props}/>)}
+                {   props.userType === 'user' && props.popup === 'manager-details' && (<ManagerDetailsPopup props={props}/>)}
+                {   props.userType === 'organiser' && (<OrganiserPopupExpanded props={props}/>)}
+                {   props.userType === 'manager' && (<ManagerPopupExpanded props={props}/>)}
 
-                {
-                    props.view === 'registered' &&
-                    hasRegisteredUser &&
-                    (<button className='choice-btn' id="apply" onClick={() => {
-                        props.setView('announcements');
-                        props.setPopup(null);
-                    }}>See announcements</button>)}
-
-                {   props.popup !== 'manage' &&
-                    (<button className="choice-btn" onClick={() => {
-                        props.setPopup(null);
-                    }}>Close</button>)}
+                <button className="choice-btn" onClick={() => {props.setPopup(null)}}>Close</button>
             </div>
         </div>
     );
 }
 
-
-
+export function ManagerDetailsPopup({props}) {
+    const manager = props.popupData;
+    
+    return (
+        <div className="manager-details">
+            <h3>Trip Manager Details</h3>
+            <div className="manager-info">
+                <p><strong>Name:</strong> {manager.name} {manager.surname}</p>
+                <p><strong>Phone:</strong> {manager.phoneNumber}</p>
+                <p><strong>Email:</strong> {manager.email}</p>
+                <p><strong>Company:</strong> {manager.company?.name}</p>
+                <p><strong>Position:</strong> Trip Manager</p>
+            </div>
+        </div>
+    );
+}
 
 export function ViewUsers({props}) {
+    console.log('ViewUsers - props.popupData:', props.popupData);
+    console.log('ViewUsers - users:', props.popupData?.users);
+    
     const [selectedId, setSelectedId] = useState('');
     const [selected, setSelected] = useState(null);
+    
     const handleAssign = (e) => {
         const id = e.target.value;
         setSelectedId(id);
@@ -161,7 +98,7 @@ export function ViewUsers({props}) {
 
     const handleResign = async () => {
         try {
-            const response = await fetch(`http://localhost:8080/user-trip/${props.popupData.id}/resign/${selected.id}`, {
+            const response = await fetch(`/user-trip/${props.popupData.id}/resign/${selected.user.id}`, {
                 method: 'DELETE',
             });
 
@@ -171,39 +108,45 @@ export function ViewUsers({props}) {
                 return;
             }
 
-            alert("Successfully resigned from the trip.");
+            alert("Successfully removed user from trip.");
+            // Refresh the data by triggering a re-render
+            if (props.setBlockStateOrganiser) {
+                props.setBlockStateOrganiser(!props.blockStateOrganiser);
+            }
+            props.setPopup(null);
         } catch (err) {
-            alert("Error occurred while resigning.");
+            alert("Error occurred while removing user.");
         }
     };
 
-
     const handleAssignToTrip = async () => {
         try {
-            const response = await fetch(`http://localhost:8080/user-trip/assign`, {
+            const response = await fetch(`/user-trip/assign`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    userId: selected.id,
-                    tripId: props.popupData.id,
-                    role: 'IsPartOfTrip'
+                    userId: selected.user.id,
+                    tripId: props.popupData.id
                 }),
             });
 
-
             if (!response.ok) {
                 if (response.status === 409) {
-                    alert("You are already registered for this trip.");
+                    alert("User is already assigned to this trip.");
                 } else {
-                    alert("Failed to apply to trip.");
+                    alert("Failed to assign user to trip.");
                 }
                 return;
             }
 
-            alert("Successfully applied!");
-
+            alert("Successfully assigned user to trip!");
+            // Refresh the data by triggering a re-render
+            if (props.setBlockStateOrganiser) {
+                props.setBlockStateOrganiser(!props.blockStateOrganiser);
+            }
+            props.setPopup(null);
         } catch (error) {
             alert("Something went wrong.");
         }
@@ -212,33 +155,31 @@ export function ViewUsers({props}) {
     return (
         <div>
             <select value={selectedId} onChange={handleAssign}>
-                <option value="">Select an item</option>
+                <option value="">Select a user</option>
                 {props.popupData.users?.map((item) => (
                     <option key={item.id} value={item.id}>
-                        {item.user.name}
-                        <> </>
-                        {item.user.surname}
+                        {item.user.name} {item.user.surname} - {item.role}
                     </option>
                 ))}
             </select>
             {
                 selected && typeof selected === 'object' && (
                     <div className="scrollableArea">
-                        {Object.entries(selected).map(([key, value]) =>
-                            (key !== "id" && key !=="user" && (<p key={key}>
-                                {(<strong>{key}:</strong>)} {value?.toString()}
-                            </p>))) }
-
-                        {Object.entries(selected.user).map(([key, value]) => (
-                            (key !== "id" && (<p key={key}>
-                                <strong>{key}:</strong> {value?.toString()}
-                            </p>))
-                        ))}
+                        <h4>User Details:</h4>
+                        <p><strong>Name:</strong> {selected.user.name} {selected.user.surname}</p>
+                        <p><strong>Email:</strong> {selected.user.email}</p>
+                        <p><strong>Phone:</strong> {selected.user.phoneNumber}</p>
+                        <p><strong>Role:</strong> {selected.role}</p>
+                        <p><strong>Registration Date:</strong> {selected.registerDate}</p>
+                        <p><strong>Registration Order:</strong> {selected.registrationOrder}</p>
                     </div>
                 )}
-            { selected?.role === 'isPartOfTrip' && (<button className="choice-btn" onClick={handleResign}>Delete</button>)}
-            { selected?.role === 'Registered' && (<button className="choice-btn" onClick={handleAssignToTrip}>Assign to trip</button>)}
-
+            { selected?.role === 'isPartOfTrip' && (
+                <button className="choice-btn" onClick={handleResign}>Remove from Trip</button>
+            )}
+            { selected?.role === 'Registered' && (
+                <button className="choice-btn" onClick={handleAssignToTrip}>Assign to Trip</button>
+            )}
         </div>
     );
 }
@@ -252,12 +193,16 @@ export function TouristServices({ props }){
 }
 
 export function TouristServicesList({ props }) {
+    console.log('TouristServicesList - props.touristServices:', props.touristServices);
+    console.log('TouristServicesList - vehiclesInTrip:', props.touristServices?.vehiclesInTrip);
+    console.log('TouristServicesList - hotelsInTrip:', props.touristServices?.hotelsInTrip);
+    
     return (
         <div className="container-list">
-            {props.touristServices.vehiclesInTrip?.map((vehicle, index) =>
-                (<TouristServiceBlock props={props} data={vehicle}/>)) }
-            {props.touristServices.hotelsInTrip?.map((hotel, index) =>
-                (<TouristServiceBlock props={props} data={hotel}/>)) }
+            {props.touristServices?.vehiclesInTrip?.map((vehicle, index) =>
+                (<TouristServiceBlock key={index} props={props} data={vehicle}/>)) }
+            {props.touristServices?.hotelsInTrip?.map((hotel, index) =>
+                (<TouristServiceBlock key={index} props={props} data={hotel}/>)) }
         </div>
     )
 }
@@ -277,14 +222,42 @@ function TouristServiceBlock({ props, data }){
             ? data.hotelStartDate || data.startDate
             : "Unknown";
 
+    const status = data.status || "Unknown";
+    const statusColor = status === "W trakcie" ? "green" : 
+                       status === "Dodany Do Wyjazdu" ? "blue" : 
+                       status === "Bez Wyjazdu" ? "gray" : "black";
 
+    const handleClick = () => {
+        if (isVehicle) {
+            props.setCurrentTouristService(data.vehicle);
+        } else if (isHotel) {
+            props.setCurrentTouristService(data.hotel);
+        }
+        props.setPopup('manage');
+    };
 
-
-    return (<div className="container" onClick={() =>
-    {isVehicle && props.setCurrentTouristService(data.vehicle);
-        isHotel && props.setCurrentTouristService(data.hotel);
-        props.setPopup('manage'); }}>
-        <h5>Name: {name}</h5>
-        <p>Start date: {startDate}</p>
-    </div>)
+    return (
+        <div className="container tourist-service-block" onClick={handleClick}>
+            <div className="container-content">
+                <h5>Name: {name}</h5>
+                <p>Start date: {startDate}</p>
+                <p style={{color: statusColor}}>Status: {status}</p>
+                <div className="service-details">
+                    {isVehicle && (
+                        <>
+                            <p>Type: {data.vehicle.vehicleType}</p>
+                            {data.vehicle.driverCompany && <p>Company: {data.vehicle.driverCompany}</p>}
+                        </>
+                    )}
+                    {isHotel && (
+                        <>
+                            <p>Address: {data.hotel.hotelAddress}</p>
+                            {data.hotel.hotelWebsite && <p>Website: {data.hotel.hotelWebsite}</p>}
+                            {data.hotel.hotelEmail && <p>Email: {data.hotel.hotelEmail}</p>}
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
+    )
 }
