@@ -1,36 +1,24 @@
-import { PostList } from "../Utils";
+import {PostList, UserData} from "../Utils";
 import {useEffect, useState} from "react";
 
 export function ManagerHeader({props}){
     return (<header className="Header">
             <nav>
                 <button className="choice-btn" onClick={() => props.setView('explore')}>Explore</button>
+                <button className='choice-btn' onClick={() => (props.setView('add-announcement'))}>Write an announcement
+                </button>
             </nav>
         </header>
     )
 }
 
 
-
-export function AnnouncementsWriteOnly({ props }) {
-    const [managerData, setManagerData] = useState(null);
+export function AnnouncementsWriteOnly({props}) {
     const [newAnnouncement, setNewAnnouncement] = useState({ tripId: '', content: '' });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const response = await fetch('/manager/2/trips');
-                const manager = await response.json();
-                setManagerData(manager);
-            } catch (error) {
-                console.error('Error fetching data:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
+        setLoading(false)
     }, []);
 
     const handleSubmit = async (e) => {
@@ -69,7 +57,7 @@ export function AnnouncementsWriteOnly({ props }) {
                         required
                     >
                         <option value="">Choose a trip...</option>
-                        {managerData?.trips?.map(trip => (
+                        {props.userData?.trips?.map(trip => (
                             <option key={trip.id} value={trip.id}>
                                 {trip.name}
                             </option>
@@ -101,16 +89,14 @@ export function AnnouncementsWriteOnly({ props }) {
 }
 
 export function ManagerView({props}){
-    const [managerData, setManagerData] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await fetch('/manager/2/trips');
+                const response = await fetch(`/manager/${props.currentUserId}`);
                 const manager = await response.json();
-                console.log('Manager data:', manager);
-                setManagerData(manager);
+                props.setUserData(manager);
             } catch (error) {
                 console.error('Error fetching data:', error);
             } finally {
@@ -122,52 +108,54 @@ export function ManagerView({props}){
     }, [props.blockStateManager]);
 
     if (loading) return <div>Loading...</div>;
-
-    console.log('Manager view - props.view:', props.view);
-    console.log('Manager view - managerData:', managerData);
-
     switch (props.view) {
-        case 'explore':
-            return <PostList props={props} data={managerData?.trips || []} />;
         case 'add-announcement':
             return <AnnouncementsWriteOnly props={props} />;
+        case 'explore':
         default:
-            return <PostList props={props} data={managerData?.trips || []} />;
+            return <PostList props={props} data={props.userData.trips} />;
     }
 }
 
 
 export function ManagerPostBlockInteraction({props, data}) {
-    console.log(data)
     return(<>
-        <button className='choice-btn' onClick={() => (props.setView('add-announcement'))}>Write an announcement
-        </button>
         <button className='choice-btn' onClick={() => {
-            props.setPopupData(data)
             props.setPopup('users')
+            props.setPopupData(data.users)
         }}>See users in trip
         </button>
         <button className='choice-btn' onClick={() => {
-            props.setPopupData(data)
             props.setPopup('tourist-services')
+            props.setPopupData(data)
         }}>View touristic services in trip
         </button>
     </>)
 }
 
+
 export function ManagerPopupExpanded({props}) {
+    const [loading, setLoading] = useState(true);
+    const [serviceLogic, setServiceLogic] = useState(true);
+
+    useEffect(() => {
+        setLoading(false)
+    }, [serviceLogic]);
+
+
+
+
     const handleServiceStatusChange = async (serviceId, newStatus) => {
         try {
             const response = await fetch(`/tourist-service/${serviceId}/status`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: newStatus })
+                body: JSON.stringify({ newStatus: newStatus })
             });
 
             if (response.ok) {
                 alert('Service status updated successfully!');
-                // Refresh the data
-                window.location.reload();
+                setServiceLogic(!serviceLogic)
             } else {
                 const error = await response.text();
                 alert('Error: ' + error);
@@ -178,45 +166,36 @@ export function ManagerPopupExpanded({props}) {
         }
     };
 
+    if (loading) return <div>Loading...</div>;
     return (
-        <div className="manager-popup-content">
+        <div className="employee-popup-content">
             {props.popup === 'users' && (
-                <div className="users-section">
-                    <h3>Trip Participants</h3>
-                    {props.popupData.users?.map((element, index) => (
-                        <div key={index} className="user-item">
-                            <p><strong>User ID:</strong> {element.id}</p>
-                            <p><strong>Name:</strong> {element.user?.name} {element.user?.surname}</p>
-                            <p><strong>Email:</strong> {element.user?.email}</p>
-                            <p><strong>Phone:</strong> {element.user?.phoneNumber}</p>
-                        </div>
-                    ))}
-                </div>
+                <UserData props={props}/>
             )}
-
             {props.popup === 'tourist-services' && (
                 <div className="services-section">
                     <h3>Tourist Services</h3>
-                    
+                    {(props.popupData.vehiclesInTrip.length === 0) && (props.popupData.vehiclesInTrip.length === 0) && (<h2>There's no tourist services available</h2>)}
                     <div className="hotels-section">
-                        <h4>Hotels</h4>
-                        {props.popupData.hotelsInTrip?.map((element, index) => (
+                        {(props.popupData.vehiclesInTrip.length > 0) && (<h4>Hotels</h4>)}
+
+                        {(props.popupData.hotelsInTrip.length > 0) && props.popupData.hotelsInTrip?.map((element, index) => (
                             <div key={index} className="service-item">
                                 <p><strong>Hotel:</strong> {element.hotel?.name}</p>
                                 <p><strong>Address:</strong> {element.hotel?.hotelAddress}</p>
-                                <p><strong>Status:</strong> {element.status}</p>
+                                <p><strong>Status:</strong> {element.hotel?.state}</p>
                                 <div className="service-actions">
                                     <button 
                                         className="choice-btn" 
-                                        onClick={() => handleServiceStatusChange(element.id, 'W trakcie')}
-                                        disabled={element.status === 'W trakcie'}
+                                        onClick={() => handleServiceStatusChange(element.hotel?.id, 'Active')}
+                                        disabled={element.hotel?.state === 'Active' || element.hotel?.state === 'Completed'}
                                     >
                                         Start Service
                                     </button>
                                     <button 
                                         className="choice-btn" 
-                                        onClick={() => handleServiceStatusChange(element.id, 'Zakończony')}
-                                        disabled={element.status === 'Zakończony'}
+                                        onClick={() => handleServiceStatusChange(element.hotel?.id, 'Completed')}
+                                        disabled={element.hotel?.state === 'Completed'}
                                     >
                                         End Service
                                     </button>
@@ -226,24 +205,24 @@ export function ManagerPopupExpanded({props}) {
                     </div>
 
                     <div className="vehicles-section">
-                        <h4>Vehicles</h4>
+                        {(props.popupData.vehiclesInTrip.length > 0) && (<h4>Vehicles</h4>)}
                         {props.popupData.vehiclesInTrip?.map((element, index) => (
                             <div key={index} className="service-item">
                                 <p><strong>Vehicle:</strong> {element.vehicle?.name}</p>
                                 <p><strong>Type:</strong> {element.vehicle?.vehicleType}</p>
-                                <p><strong>Status:</strong> {element.status}</p>
+                                <p><strong>Status:</strong> {element.vehicle?.state}</p>
                                 <div className="service-actions">
                                     <button 
                                         className="choice-btn" 
-                                        onClick={() => handleServiceStatusChange(element.id, 'W trakcie')}
-                                        disabled={element.status === 'W trakcie'}
+                                        onClick={() => handleServiceStatusChange(element.vehicle.id, 'Active')}
+                                        disabled={element.vehicle?.state === 'Active' || element.vehicle?.state === 'Completed'}
                                     >
                                         Start Service
                                     </button>
                                     <button 
                                         className="choice-btn" 
-                                        onClick={() => handleServiceStatusChange(element.id, 'Zakończony')}
-                                        disabled={element.status === 'Zakończony'}
+                                        onClick={() => handleServiceStatusChange(element.vehicle.id, 'Completed')}
+                                        disabled={element.vehicle?.state === 'Completed'}
                                     >
                                         End Service
                                     </button>

@@ -16,17 +16,15 @@ function App(){
     const [popupData, setPopupData] = useState(null);
     const [blockStateUser, setBlockStateUser] = useState(true);
 
-    const [data, setData] = useState({});
-
-
-    const currentUser = {
-        id: {get: currentUserId, set: setCurrentUserId},
-        type: {get: userType, set: setUserType},
-        frame: {get: view, set: setView},
-        data: {get: data, set: setData},
-    }
-
+    const [userData, setUserData] = useState({});
+    const [id, setId] = useState(0);
+    const [currentElementId, setCurrentElementId] = useState(0);
+    const [updateData, setUpdateData] = useState(true);
+    const [refetchFunction, setRefetchFunction] = useState(null);
+    const [currentTouristService, setCurrentTouristService] = useState(null);
+    const [currentOptionService, setCurrentOptionService] = useState(null);
     const props = {
+        id, setId,
         currentUserId, setCurrentUserId,
         userType, setUserType,
 
@@ -36,10 +34,16 @@ function App(){
         popupData, setPopupData,
 
         blockStateUser, setBlockStateUser,
-        currentUser
+        userData, setUserData,
+        currentElementId, setCurrentElementId,
+        updateData, setUpdateData,
+        refetchFunction, setRefetchFunction,
+
+        currentTouristService, setCurrentTouristService,
+        currentOptionService, setCurrentOptionService
     }
 
-    return ( // remake to {...props}
+    return (
         <div className="App">
             {userType === 'user' && (<UserHeader props={props}/>)}
             {userType === 'organiser' && (<OrganiserHeader props={props}/>)}
@@ -57,11 +61,18 @@ function App(){
 function OptionHeader({props}){
     const handleUserAssign  = (userType) => {
         switch (userType) {
-                case 'organiser':
-                case 'user':
-                case 'manager':
-                    props.setUserType(userType);
-                    props.setCurrentUserId(1)
+            case 'organiser':
+                props.setCurrentUserId(1)
+                props.setUserType(userType);
+                break;
+            case 'user':
+                props.setCurrentUserId(1)
+                props.setUserType(userType);
+                break;
+            case 'manager':
+                props.setCurrentUserId(2)
+                props.setUserType(userType);
+                break;
         }
     }
     return (
