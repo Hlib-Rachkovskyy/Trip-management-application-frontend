@@ -51,6 +51,7 @@ export function UserView({props}) {
                 ...uit.trip,
                 userInTrip: uit
             })) || [];
+
             break;
         case 'form':
             return <FormPage props={props} />;
@@ -64,7 +65,7 @@ export function UserView({props}) {
 }
 
 
-export function FormPage({ props }) { // make empty not
+export function FormPage({ props }) {
     const [loading, setLoading] = useState(false)
     const [companyList, setCompanyList] = useState([])
     const [userText, setUserText] = useState('');
@@ -89,7 +90,7 @@ export function FormPage({ props }) { // make empty not
         const payload = {
             text: userText,
             userId: props.currentUserId,
-            companyId: currentCompany,
+            companyId: currentCompany.id,
             sendDate: Date.now()
         };
 
@@ -233,6 +234,7 @@ export function UserPostBlockInteraction({props, data}) {
 
     const handleApply = async () => {
         try {
+
             const response = await fetch(`/user-trip/apply`, {
                 method: 'POST',
                 headers: {
@@ -266,7 +268,6 @@ export function UserPostBlockInteraction({props, data}) {
         props.setView('announcements')
         props.setCurrentElementId(data.id)
     }
-
     return (
         <>
             { (<button className='choice-btn' onClick={() => {
@@ -275,34 +276,68 @@ export function UserPostBlockInteraction({props, data}) {
             }}>Expand</button>)}
 
             {props.view === 'registered' && <button className='choice-btn' onClick={handleResign} id="resing">Resign</button>}
-            { props.view === 'registered' && (<button className='choice-btn' id="details" onClick={openAnnouncementsAndInfoAboutOrganiser}>See details</button>)}
+            { props.view === 'registered' && data.userInTrip.role === 'isPartOfTrip' && (<button className='choice-btn' id="details" onClick={openAnnouncementsAndInfoAboutOrganiser}>See details</button>)}
             {props.view === 'explore' && <button className='choice-btn' onClick={handleApply} id="apply">Apply</button>}
         </>)
 }
 
 export function UserPostExpanded({props}) {
+
     return (<><div className="scrollableArea">{
         Object.entries(props.popupData).map(([key, value]) => {
+
+            if (key === 'company' && typeof value === 'object' && value !== null) {
+                return (
+                    <p key={key}>
+                        <strong>{key}:</strong> {value.name || 'Unknown Company'}
+                    </p>
+                );
+            }
+
+            if (key === 'vehiclesInTrip') {
+                return (
+                    <div key={key}>
+                        <h2>{key}:</h2>
+                        {value.length === 0 ? (
+                            <p>None</p>
+                        ) : (
+                            value.map((v) => (
+                                <div key={v.id} >
+                                    <p><strong>Start:</strong> {v.startDate} ({v.startPoint})</p>
+                                    <p><strong>End:</strong> {v.endDate}</p>
+                                    <p><strong>Vehicle:</strong> {v.vehicle?.name} ({v.vehicle?.vehicleType})</p>
+                                    <p><strong>State:</strong> {v.vehicle?.state}</p>
+                                    <p><strong>Driver Company:</strong> {v.vehicle?.driverCompany}</p>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                );
+            }
+
+            if (key === 'hotelsInTrip' && Array.isArray(value)) {
+                return (
+                    <div key={key}>
+                        <h2>{key}:</h2>
+                        {value.length === 0 ? (
+                            <p>None</p>
+                        ) : (
+                            value.map((h, idx) => (
+                                <div key={idx} style={{ marginLeft: '1rem' }}>
+                                    <p><strong>Hotel:</strong> {h.name}</p>
+                                    <p><strong>Check-in:</strong> {h.startDate}</p>
+                                    <p><strong>Check-out:</strong> {h.endDate}</p>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                );
+            }
+
             if (Array.isArray(value) || key === 'id') return null;
 
-            if (key === 'company' && typeof value === 'object' && value !== null) {
-                return (
-                    <p key={key}>
-                        <strong>{key}:</strong> {value.name || 'Unknown Company'}
-                    </p>
-                );
-            }
-// tourist service
-            if (key === 'company' && typeof value === 'object' && value !== null) {
-                return (
-                    <p key={key}>
-                        <strong>{key}:</strong> {value.name || 'Unknown Company'}
-                    </p>
-                );
-            }
 
             if (typeof value === 'object' && value !== null) return null;
-
 
 
             return (

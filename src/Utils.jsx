@@ -19,7 +19,6 @@ export function PostList({props, data}){
     } else {
         tripsToDisplay = [];
     }
-
     return (
         <div className="container-list">
             {tripsToDisplay.map((value) =>
@@ -36,7 +35,7 @@ export function PostBlock({props, data}) {
                 <h5>Name: {data?.name}</h5>
                 <p>Start date: {data?.startDate}</p>
                 <p>End date: {data?.endDate}</p>
-                <p>Price: ${data?.price}</p>
+                <p>Price: {data?.price}</p>
                 {data?.company && <p>Company: {data.company.name}</p>}
             </div>
             <div className="container-buttons">
@@ -96,25 +95,57 @@ export function ManagerDetailsPopup({props}) {
 
 
 export function UserData({props}) {
-    const handleUserApprovalToTrip = async () => { // To do
+    const handleUserApprovalToTrip = async (userInTripId) => {
+        try {
+            const response = await fetch(`/${userInTripId}/approve`, {
+                method: "PUT",
+            });
 
-    }
+            if (response.ok) {
+                alert("User approved for the trip");
+            } else {
+                alert("Failed to approve user");
+            }
+        } catch (error) {
+            console.error("Error approving user:", error);
+        }
+    };
 
-    const handleUserRemovalFromTrip = async () => {
+    const handleUserRemovalFromTrip = async (userInTripId) => {
+        try {
+            const response = await fetch(`/${userInTripId}/connection`, {
+                method: "DELETE",
+            });
 
-    }
+            if (response.ok) {
+                alert("User removed from trip");
+            } else {
+                alert("Failed to remove user");
+            }
+        } catch (error) {
+            console.error("Error removing user:", error);
+        }
+    };
+
 
     return (<div className="users-section">
         <h3>Trip Participants</h3>
         {props.popupData.map((element, index) => (
             <div key={index} className="user-item">
-                <p><strong>User ID:</strong> {element.id}</p>
+                <p><strong>UserInTrip ID:</strong> {element.id}</p>
                 <p><strong>Name:</strong> {element.user?.name} {element.user?.surname}</p>
                 <p><strong>Email:</strong> {element.user?.email}</p>
                 <p><strong>Phone:</strong> {element.user?.phoneNumber}</p>
+                <p><strong>Register date:</strong> {element.registerDate}</p>
+                <p><strong>Registration order:</strong> {element.registrationOrder}</p>
+
                 <p><strong>Role:</strong> {element.role}</p>
-                {props.userType === 'organiser' && element.role === 'Registered' && <button className="choice-btn">Approve</button>}
-                {props.userType === 'organiser' && element.role === 'IsPartOfTrip' && <button className="choice-btn">Remove</button>}
+                {props.userType === 'organiser' && element.role === 'Registered' &&
+                    <button className="choice-btn"
+                            onClick={() => handleUserApprovalToTrip(element.id)}>Approve</button>}
+                {props.userType === 'organiser' && element.role === 'isPartOfTrip' &&
+                    <button className="choice-btn"
+                            onClick={() => handleUserRemovalFromTrip(element.id)}>Remove</button>}
 
             </div>
         ))}

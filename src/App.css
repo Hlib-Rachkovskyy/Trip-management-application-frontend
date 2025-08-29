@@ -111,7 +111,7 @@ main h1 {
 }
 
 .scrollableArea {
-  max-height: 300px; /* or any height you want */
+  max-height: 300px;
   overflow-y: auto;
   padding: 10px;
   border: 1px solid #ccc;
@@ -148,7 +148,6 @@ main h1 {
 .announcement-block .writer-text {
 }
 
-/* New styles for enhanced functionality */
 .contact-forms-list {
   padding: 20px;
   max-width: 800px;
@@ -475,7 +474,6 @@ main h1 {
   margin: 3px 0;
 }
 
-/* Status colors */
 .status-active {
   color: #28a745;
 }
@@ -488,7 +486,6 @@ main h1 {
   color: #6c757d;
 }
 
-/* Responsive design */
 @media (max-width: 768px) {
   .user-view, .organiser-view, .manager-view {
     padding: 10px;
