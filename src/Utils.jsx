@@ -46,19 +46,15 @@ export function PostBlock({props, data}) {
         </div>)
 }
 
-
-
-
 export function Popup({props}) {
-
     const handleClose = () => {
         props.setPopup(null);
         props.setId(0);
-
         if (props.popup === 'manage'){
             props.setView('trips-created');
             props.setCurrentTouristService(null)
-            props.setCurrentOptionService(null)
+            props.setCurrentOptionService(null);
+            props.setAddOption(null)
         }
     }
 

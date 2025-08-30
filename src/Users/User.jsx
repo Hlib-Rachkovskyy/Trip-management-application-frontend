@@ -130,7 +130,7 @@ export function FormPage({ props }) {
                     <p>Country: {a.country}</p>
                 </div>
             )})}
-            <form className='form-container' onSubmit={handleSubmit}>
+            <form className="announcement-form" onSubmit={handleSubmit}>
                 <label htmlFor="company">Choose a company:</label>
                 <select
                     className='select-container'
@@ -160,7 +160,7 @@ export function FormPage({ props }) {
                     required
                 />
                 <br/><br/>
-                <button className="submit" type="submit">Submit</button>
+                <button className="choice-btn" type="submit">Submit</button>
             </form>
         </>
 
@@ -302,12 +302,13 @@ export function UserPostExpanded({props}) {
                             <p>None</p>
                         ) : (
                             value.map((v) => (
-                                <div key={v.id} >
+                                <div key={v.id}>
                                     <p><strong>Start:</strong> {v.startDate} ({v.startPoint})</p>
                                     <p><strong>End:</strong> {v.endDate}</p>
                                     <p><strong>Vehicle:</strong> {v.vehicle?.name} ({v.vehicle?.vehicleType})</p>
                                     <p><strong>State:</strong> {v.vehicle?.state}</p>
                                     <p><strong>Driver Company:</strong> {v.vehicle?.driverCompany}</p>
+                                    <p><strong>Phone:</strong> {v.vehicle?.phoneNumbers}</p>
                                 </div>
                             ))
                         )}
@@ -315,18 +316,22 @@ export function UserPostExpanded({props}) {
                 );
             }
 
-            if (key === 'hotelsInTrip' && Array.isArray(value)) {
+            if (key === 'hotelsInTrip') {
                 return (
                     <div key={key}>
                         <h2>{key}:</h2>
                         {value.length === 0 ? (
                             <p>None</p>
                         ) : (
-                            value.map((h, idx) => (
-                                <div key={idx} style={{ marginLeft: '1rem' }}>
-                                    <p><strong>Hotel:</strong> {h.name}</p>
-                                    <p><strong>Check-in:</strong> {h.startDate}</p>
-                                    <p><strong>Check-out:</strong> {h.endDate}</p>
+                            value.map((h) => (
+                                <div key={h.id}>
+                                    <p><strong>Hotel:</strong> {h.hotel.name}</p>
+                                    <p><strong>Check-in:</strong> {h.hotelStartDate}</p>
+                                    <p><strong>Check-out:</strong> {h.hotelEndDate}</p>
+                                    <p><strong>Addres:</strong> {h.hotel.hotelAddress}</p>
+                                    <p><strong>Website:</strong> {h.hotel.hotelWebsite}</p>
+                                    <p><strong>Email:</strong> {h.hotel.hotelEmail}</p>
+                                    <p><strong>Phone:</strong> {h.hotel.phoneNumbers}</p>
                                 </div>
                             ))
                         )}

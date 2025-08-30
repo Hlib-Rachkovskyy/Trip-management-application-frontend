@@ -1,4 +1,4 @@
-import {useEffect, useState} from "react";
+import {use, useEffect, useState} from "react";
 import {PostList, UserData} from "../Utils";
 
 export function OrganiserHeader({props}) {
@@ -18,7 +18,7 @@ export function OrganiserHeader({props}) {
                 }
             }>View written forms</button>
             {props.view === 'tourist-services' &&
-                (<h1 className='black'>You currently viewing tourist service for trip: {props.touristServices}</h1>)}
+                (<h1 className='black'>You currently viewing tourist service for trip: {props.popupData.name}</h1>)}
         </nav>
     </header>)
 
@@ -477,7 +477,10 @@ export function TouristServices({ props }) {
 
 function EmptyServiceBlock({ props }) {
     const handleClick = () => {
+        props.setAddOption('new');
+        props.setCurrentTouristService(null)
         props.setPopup('manage');
+
     };
 
     return (
@@ -531,24 +534,23 @@ function TouristServiceBlock({ props, data }){
             ? data.hotelStartDate || data.startDate
             : "Unknown";
 
-    const status = data.state || "Unknown";
 
     const handleClick = () => {
+        props.setAddOption('copy')
         if (isVehicle) {
             const vehicleDataWithList = {
                 ...data.vehicle,
-                vehicleInTripList: data.vehicleInTripList
+                vehicleInTripList: data
             };
             props.setCurrentTouristService(vehicleDataWithList);
 
         } else if (isHotel) {
             const hotelDataWithExtra = {
                 ...data.hotel,
-                hotelInTripList: data.hotelInTripList
+                hotelInTripList: data
             };
             props.setCurrentTouristService(hotelDataWithExtra);
         }
-        console.log(data.vehicleInTripList);
         props.setPopup('manage');
     };
 
@@ -562,7 +564,6 @@ function TouristServiceBlock({ props, data }){
             <div className="container-content">
                 <h5>Name: {name}</h5>
                 <p>Start date: {startDate}</p>
-                <p>Status: {status}</p>
                 <div className="service-details">
                     {isVehicle && (
                         <>
@@ -597,16 +598,13 @@ function TouristServiceBlock({ props, data }){
 }
 
 function ManagementStateComponent({props}) {
-    const [currentTouristService, setCurrentTouristService] = useState('')
-
-    useEffect(() => {
-        setCurrentTouristService(props.currentTouristService)
-    }, [props.currentTouristService]);
-
     const resetManagementState = () => {
         props.setCurrentOptionService(null);
         props.setCurrentTouristService(null);
         props.setPopup(null);
+        props.setView('created-trips')
+        props.setAddOption(null)
+
     };
 
     const enhancedProps = {
@@ -630,7 +628,7 @@ function ManagementStateComponent({props}) {
         props.setPopup(null)
     }
 
-    if (!currentTouristService) {
+    if (!props.currentTouristService && props.addOption !== 'new') {
         return (
             <div className="management-state">
                 <h3>Pick an option to manage service in tour {props.popupData.name}</h3>
@@ -649,8 +647,7 @@ function ManagementStateComponent({props}) {
         case 'delete':
             return <ManagementDeleteComponent props={enhancedProps} />
         default:
-            props.setCurrentOptionService(null);
-            return null;
+            return null
     }
 }
 
@@ -658,6 +655,8 @@ function ManagementEditComponent({props}) {
     const handleData = () => {
         props.setCurrentOptionService(null)
         props.setCurrentTouristService(null)
+        props.setPopup(null)
+        props.setView('trips-created')
     }
 
 
@@ -709,15 +708,22 @@ function ManagementEditComponent({props}) {
 
                 return (
                     <div key={key} className="form-field">
-                        <label htmlFor={key}><strong>{key}:</strong></label>
-                        <input
-                            type="text"
-                            id={key}
-                            name={key}
-                            defaultValue={value?.toString()}
-                        />
+                        {typeof value !== "object" && (
+                            <>
+                                <label htmlFor={key}>
+                                    <strong>{key}:</strong>
+                                </label>
+                                <input
+                                    type="text"
+                                    id={key}
+                                    name={key}
+                                    defaultValue={value?.toString()}
+                                />
+                            </>
+                        )}
                     </div>
                 );
+
             })}
             <button type="submit" className="choice-btn">
                 Save changes
@@ -727,114 +733,218 @@ function ManagementEditComponent({props}) {
 }
 
 function ManagementAddComponent({props}) {
-    const [addOption, setAddOption] = useState('');
-    const [serviceType, setServiceType] = useState('');
-    const [availableServices, setAvailableServices] = useState([]);
-    const [loading, setLoading] = useState(false);
     const [relation, setRelation] = useState('service');
+    const [tempalte, setTemplate] = useState({})
+    const [serviceType, setServiceType] = useState('')
+    const [savedServiceData, setSavedServiceData] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
-        if (addOption === 'copy' && serviceType) {
-           // fetchAvailableServices();
-        }
-    }, [addOption, serviceType]);
+        getServiceType(props.currentTouristService)
+    }, []);
 
+    const saveServiceToDatabase = async (serviceData, serviceType) => {
+        setIsLoading(true);
+        setError(null);
 
-
-
-    const fetchAvailableServices = async () => {
-        setLoading(true);
         try {
             const endpoint = serviceType === 'hotel' ? '/hotel' : '/vehicle';
-            const response = await fetch(endpoint);
-            const services = await response.json();
-            setAvailableServices(services);
-        } catch (error) {
-            console.error('Error fetching services:', error);
-            alert('Failed to fetch available services');
+
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(serviceData)
+            });
+
+
+            if (!response.ok) {
+                throw new Error(`Failed to save ${serviceType}: ${response.statusText}`);
+            }
+
+            const savedData = await response.json();
+
+            setSavedServiceData(savedData);
+            return savedData;
+        } catch (err) {
+            setError(err.message);
+            throw err;
         } finally {
-            setLoading(false);
+            setIsLoading(false);
+        }
+    };
+
+    const linkServiceToTrip = async (tripData, serviceId, serviceType, tripId) => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const endpoint = `${serviceType === 'hotel' ? '/hotel-in-trip' : '/vehicle-in-trip'}/${tripId}/${serviceId}`;
+
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(tripData)
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to link ${serviceType} to trip: ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            return result;
+        } catch (err) {
+            setError(err.message);
+            throw err;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const getServiceType = (service) => {
+        if (!service) return null;
+
+        if (service.serviceType) {
+            return service.serviceType;
+        }
+
+        if (service.hotelAddress || service.hotelWebsite || service.hotelEmail || service.hotelInTripList || service === 'hotel') {
+            setServiceType('hotel')
+
+            return 'hotel';
+        }
+
+        if (service.vehicleType || service.driverCompany || service.vehicleInTripList || service === 'vehicle') {
+            setServiceType('vehicle')
+
+            return 'vehicle';
+        }
+
+        return null;
+    };
+
+    const getCurrentTemplate = (string) => {
+        if (string === 'hotel') {
+            setTemplate( {
+                name: '',
+                phoneNumbers: [],
+                hotelAddress: '',
+                hotelWebsite: '',
+                hotelEmail: '',
+                hotelInTripList: {
+                    hotelStartDate: '',
+                    hotelEndDate: ''
+                }
+                })
+
+        } else if (string === 'vehicle') {
+            setTemplate( {
+                name: '',
+                phoneNumbers: [],
+                vehicleType: '',
+                driverCompany: '',
+                vehicleInTripList: {
+                    startDate: '',
+                    endDate: '',
+                    startPoint: ''
+                }
+            })
         }
     };
 
     const handleRelation = async (e) => {
         e.preventDefault();
-        console.log(props.popupData)
         const formData = new FormData(e.target);
         const formObject = Object.fromEntries(formData.entries());
 
-        const vehicleRequestBody = {
-            id: 1,
-            name: formObject.name,
-            phoneNumbers: formObject.phoneNumbers || [],
-            state: formObject.state ? 'NotAsigned' : 'Asigned',
-            vehicle_type: formObject.vehicle_type,
-            driver_company: formObject.driver_company,
+        const currentServiceType = props.addOption === 'copy'
+            ? (serviceType)
+            : serviceType;
 
-            organiserId: parseInt(formObject.organiserId)
+        const phoneNumbers = formData.getAll('phoneNumbers[]');
+
+        const vehicleRequestBody = {
+            name: formObject.name,
+            phoneNumbers: phoneNumbers || [],
+            state: 'NotAssigned',
+            vehicleType: formObject.vehicleType,
+            driverCompany: formObject.driverCompany,
+            organiserId: parseInt(props.currentUserId)
         };
 
-
         const hotelRequestBody = {
-            id: 1,
             name: formObject.name,
-            phoneNumbers: formObject.phoneNumbers || [],
-            state: formObject.state ? 'NotAsigned' : 'Asigned',
+            phoneNumbers: phoneNumbers || [],
+            state: 'NotAssigned',
             hotelWebsite: formObject.hotelWebsite,
             hotelAddress: formObject.hotelAddress,
             hotelEmail: formObject.hotelEmail,
-
-            organiserId: parseInt(formObject.organiserId)
+            organiserId: parseInt(props.currentUserId)
         };
 
-        setRelation('trip');
+        const requestBody = currentServiceType === 'hotel' ? hotelRequestBody : vehicleRequestBody;
+
+        try {
+            const savedService = await saveServiceToDatabase(requestBody, currentServiceType);
+            setRelation('trip');
+        } catch (err) {
+            console.error('Error saving service:', err);
+        }
     }
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         const formData = new FormData(e.target);
         const formObject = Object.fromEntries(formData.entries());
 
+        const currentServiceType = props.addOption === 'copy'
+            ? (serviceType)
+            : serviceType;
 
-        const vehicleInTripRequestBody = {
-            id: 1,
-            endDate: formObject.end_date,
-            startDate: formObject.start_date,
-            startPoint: formObject.start_point,
+        console.log(formObject)
+        const tripId = formObject.tripId;
+
+        if (!tripId) {
+            setError('Please select a trip');
+            return;
         }
 
-
-
-        const hotelInTripRequestBody = {
-            id: 1,
-            hotelEndDate: formObject.hotel_end_date,
-            hotelStartDate: formObject.hotel_start_date,
+        if (!savedServiceData) {
+            setError('No service data available. Please save the service first.');
+            return;
         }
+
         try {
-            const endpoint = serviceType === 'hotel' ? '/hotel' : '/vehicle';
-            const requestBody = serviceType === 'hotel' ? hotelInTripRequestBody : vehicleInTripRequestBody;
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody)
-            });
+            const tripData = currentServiceType === 'hotel' ? {
+                hotelStartDate: formObject.hotelStartDate,
+                hotelEndDate: formObject.hotelEndDate
+            } : {
+                startDate: formObject.startDate,
+                endDate: formObject.endDate,
+                startPoint: formObject.startPoint
+            };
 
-            if (response.ok) {
-                alert('Service added successfully!');
-            } else {
-                const error = await response.text();
-                alert('Error: ' + error);
-            }
-        } catch (error) {
-            console.error('Error adding service:', error);
-            alert('Failed to add service');
+            await linkServiceToTrip(tripData, savedServiceData, currentServiceType, tripId);
+
+            setRelation('');
+            setSavedServiceData(null);
+            setServiceType('');
+            setTemplate({});
+            props.resetManagementState()
+
+        } catch (err) {
+            console.error('Error linking service to trip:', err);
         }
-    };
+    }
+
+
 
     const [fieldCounts, setFieldCounts] = useState(() => {
         const counts = {};
-        Object.entries(props.currentTouristService).forEach(([key, value]) => {
+        Object.entries(props.currentTouristService || []).forEach(([key, value]) => {
             if (Array.isArray(value)) {
                 counts[key] = value.length;
             }
@@ -856,159 +966,142 @@ function ManagementAddComponent({props}) {
         }));
     };
 
-    if (!props.currentTouristService) {
+    if (isLoading) {
+        return <div className="loading">Saving...</div>;
+    }
+
+    if (error) {
         return (
-            <div className="service-type-selection">
-                <h3>Choose Tourist Service Type</h3>
-                <p>What type of service would you like to add?</p>
-                <button
-                    className="choice-btn"
-                    onClick={() => {
-                        setServiceType('hotel');
-                        const templateHotel = {
-                            id: null,
-                            name: '',
-                            phoneNumbers: [''],
-                            hotelAddress: '',
-                            hotelWebsite: '',
-                            hotelEmail: '',
-                            organiserId: '',
-                            hotelInTripList: {
-                                hotelStartDate: '',
-                                hotelEndDate: ''
-                            }
-                        };
-                        props.setCurrentTouristService(templateHotel);
-                    }}
-                >
-                    Add Hotel
-                </button>
-                <button
-                    className="choice-btn"
-                    onClick={() => {
-                        setServiceType('vehicle');
-                        const templateVehicle = {
-                            id: null,
-                            name: '',
-                            phoneNumbers: [''],
-                            vehicleType: '',
-                            driverCompany: '',
-                            organiserId: '',
-                            vehicleInTripList: {
-                                startDate: '',
-                                endDate: '',
-                                startPoint: ''
-                            }
-                        };
-                        props.setCurrentTouristService(templateVehicle);
-                    }}
-                >
-                    Add Vehicle
-                </button>
+            <div className="error">
+                <p>Error: {error}</p>
+                <button onClick={() => setError(null)}>Try Again</button>
             </div>
         );
     }
-
-
-    if (!addOption) {
-        return (
-            <div className="add-service-options">
-                <h3>Add New Tourist Service</h3>
-                <p>Choose how you want to add a new service:</p>
-                <button className="choice-btn" onClick={() => setAddOption('copy')}>
-                    Create as copy of existing service
-                </button>
-                <button className="choice-btn" onClick={() => setAddOption('new')}>
-                    Create completely new service
-                </button>
-            </div>
-        );
-    }
-
 
     if (relation === 'service')
-    return (
-        <div className="add-service-form">
-            <h3>{addOption === 'copy' ? 'Edit Copied Service' : `Add New ${serviceType}`}</h3>
-            <form onSubmit={handleRelation}>
-                { Object.entries(props.currentTouristService).map(([key, value]) => (
-                    <div key={key} className="form-field">
-                        {!(key === 'id' || key === 'state') && (<label htmlFor={key}>
-                            <strong>{key}:</strong>
-                        </label>)}
+        return (
+            <div className="add-service-form">
+                <h3>{props.addOption === 'copy' ? 'Edit Copied Service' : `Add New`}</h3>
+                {props.addOption === 'new' && (
+                    <div className="service-type-selection mb-4">
+                        <label htmlFor="serviceType">
+                            <strong>Service Type:</strong>
+                        </label>
+                        <select
+                            id="serviceType"
+                            value={serviceType}
+                            onChange={(e) => {getCurrentTemplate(e.target.value); setServiceType(e.target.value)}}
+                            className=""
+                            required
+                        >
+                            <option value="">Select Service Type</option>
+                            <option value="hotel">Hotel</option>
+                            <option value="vehicle">Vehicle</option>
+                        </select>
+                    </div>
+                )}
 
-                        {Array.isArray(value) ? (
-                            <div className="array-fields">
-                                {Array.from({ length: fieldCounts[key] || value.length }, (_, index) => (
-                                    <div key={`${key}-${index}`} className="array-item">
-                                        <input
-                                            type="text"
-                                            name={`${key}[]`}
-                                            defaultValue={value[index] || ''}
-                                            placeholder={`${key} ${index + 1}`}
-                                            required
-                                        />
-                                        {index > 0 && (
-                                            <button
-                                                type="button"
-                                                onClick={() => removeField(key)}
-                                            >
-                                                ×
-                                            </button>
-                                        )}
+                {props.addOption === 'copy' && (
+                    <div>
+                        <p><strong>Service Type:</strong> {serviceType}</p>
+                    </div>
+                )}
+
+                <form onSubmit={handleRelation}>
+
+                    {
+
+                        Object.entries(props.addOption === 'copy' ? props.currentTouristService : tempalte).map(([key, value]) => (
+                            <div key={key} className="form-field">
+                                {(!(key === 'id' || key === 'vehicleInTripList' || key === 'hotelInTripList' || key === 'state')) && (
+                                    <label htmlFor={key}>
+                                        <strong>{key}:</strong>
+                                    </label>)}
+
+                                {(Array.isArray(value) ? (
+                                    <div className="array-fields">
+                                        {Array.from({length: fieldCounts[key] || value.length}, (_, index) => (
+                                            <div key={`${key}-${index}`} className="array-item">
+                                                <input
+                                                    type="text"
+                                                    name={`${key}[]`}
+                                                    defaultValue={props.addOption === 'copy' ? (value[index] || '') : ''}
+                                                    placeholder={`${key} ${index + 1}`}
+                                                    required
+                                                />
+                                                {index > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeField(key)}
+                                                    >
+                                                        ×
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                        <button
+                                            type="button"
+                                            onClick={() => addField(key)}
+                                        >
+                                            + Add {key}
+                                        </button>
                                     </div>
-                                ))}
-                                <button
-                                    type="button"
-                                    onClick={() => addField(key)}
-                                >
-                                    + Add {key}
-                                </button>
+                                ) : (!(key === 'hotelInTripList' || key === 'vehicleInTripList' || key === 'id' || key === 'state') && (
+                                    <input
+                                        type="text"
+                                        name={key}
+                                        defaultValue={props.addOption === 'copy' ? value : ''}
+                                        required
+                                    />
+                                )))}
                             </div>
-                        ) : (!(key === 'id' || key === 'state') && (
-                            <input
-                                type="text"
-                                name={key}
-                                defaultValue={value || ''}
-                                className="w-full p-2 border rounded"
-                                required
-                            />)
-                        )}
-                    </div>
-                ))}
-                <button type="submit" className="choice-btn">Add Service</button>
-            </form>
-        </div>
-    );
+                        ))}
+                    <button type="submit" className="choice-btn">Add Service</button>
+                </form>
+            </div>
+        );
 
-    if (relation === 'trip')
-    return (
-        <div className="add-service-form">
-            <h3>{addOption === 'copy' ? 'Edit Copied Service' : `Add New ${serviceType}`}</h3>
-            <form onSubmit={handleSubmit}>
-                { Object.entries(props.currentTouristService.vehicleInTripList).map(([key, value]) => (
-                    <div key={key} className="form-field">
-                        {!(key === 'id' || key === 'state') && (<label htmlFor={key}>
-                            <strong>{key}:</strong>
-                        </label>)}
+    if (relation === 'trip') {
+        let tripData = props.currentTouristService?.[serviceType === 'hotel' ? 'hotelInTripList' : 'vehicleInTripList'] || {};
 
-                        {
+        if (props.addOption === 'new')
+            tripData = tempalte?.[serviceType === 'hotel' ? 'hotelInTripList' : 'vehicleInTripList']
 
-                        (!(key === 'id' || key === 'state' || Array.isArray(value)) && (
-                                <input
-                                    type="text"
-                                    name={key}
-                                    defaultValue={value || ''}
-                                    className="w-full p-2 border rounded"
-                                    required
-                                />)
-                        )}
-                    </div>
-                ))}
-                <button type="submit" className="choice-btn">Add Service</button>
-            </form>
-        </div>
-    );
+        return (
+            <div className="add-service-form">
+            <h3>Add an tourist service to tour</h3>
+                <form onSubmit={handleSubmit}>
+                    <select name="tripId" id="tripId">
+                        <option value="">Choose a trip...</option>
+                        {props.userData.trips.map((trip) => (
+                            <option key={trip.id} value={trip.id}>
+                                {trip.name}
+                            </option>
+                        ))}
+                    </select>
+                    {Object.entries(tripData).map(([key, value]) => (
+                        <div key={key} className="form-field">
+                            {(!(key === 'vehicle' || key === 'hotel' || key === 'id')) && (<label htmlFor={key}>
+                                <strong>{key}:</strong>
+                            </label>)}
+
+                            {(!(key === 'vehicle' || key === 'hotel' || key === 'id' || Array.isArray(value)) && (
+                                    <input
+                                        type="text"
+                                        name={key}
+                                        defaultValue={value || ''}
+                                        className="w-full p-2 border rounded"
+                                        required
+                                    />)
+                            )}
+                        </div>
+                    ))}
+                    <button type="submit" className="choice-btn">Add Service</button>
+                </form>
+            </div>
+        );
+    }
 }
 
 function ManagementDeleteComponent({props}) {
@@ -1019,7 +1112,19 @@ function ManagementDeleteComponent({props}) {
 
     useEffect(() => {
         if (deleteOption === 'from-trip') {
-            setAvailableTrips(props.userData.trips || []);
+                const results = [];
+                const trips = props.userData.trips
+                for (const trip of trips) {
+                    for (const hotel of trip.hotelsInTrip) {
+                            if (props.currentTouristService.id === hotel.hotel.id) results.push({name: hotel.name, id: hotel.id, Type: 'hotel'});
+                    }
+
+                    for (const vehicle of trip.vehiclesInTrip) {
+                        if (props.currentTouristService.id === vehicle.vehicle.id) results.push({name: vehicle.name, id: vehicle.id, Type: 'vehicle'});
+                    }
+                }
+
+            setAvailableTrips(results || []);
         }
     }, [deleteOption]);
 
@@ -1031,7 +1136,7 @@ function ManagementDeleteComponent({props}) {
             const serviceType = isVehicle ? 'vehicle' : 'hotel';
 
 
-            const endpoint = `/${serviceType}/${props.currentTouristService.id}/trip/${props.popupData.id}`;
+            const endpoint = `/${selectedTrip.Type}/trip/${selectedTrip.id}`;
 
             const response = await fetch(endpoint, { method: 'DELETE' });
 
@@ -1058,7 +1163,7 @@ function ManagementDeleteComponent({props}) {
         try {
             const isVehicle = !!props.currentTouristService.vehicleType;
             const serviceType = isVehicle ? 'vehicle' : 'hotel';
-
+            console.log(props.currentTouristService)
             const endpoint = `/${serviceType}/${props.currentTouristService.id}`;
 
             const response = await fetch(endpoint, { method: 'DELETE' });
@@ -1086,11 +1191,12 @@ function ManagementDeleteComponent({props}) {
         } else if (deleteOption === 'from-system') {
             handleDeleteFromSystem();
         }
+        props.resetManagementState()
     };
 
     if (!deleteOption) {
         return (
-            <div className="delete-service-options">
+            <div className="scrollableArea">
                 <h3>Delete Tourist Service: {props.currentTouristService?.name}</h3>
                 <p>Choose how you want to delete this service:</p>
                 <button className="choice-btn" onClick={() => setDeleteOption('from-trip')}>
@@ -1111,8 +1217,6 @@ function ManagementDeleteComponent({props}) {
                     {availableTrips.map(trip => (
                         <div key={trip.id} className="trip-item">
                             <p><strong>Trip:</strong> {trip.name}</p>
-                            <p><strong>Start Date:</strong> {trip.startDate}</p>
-                            <p><strong>End Date:</strong> {trip.endDate}</p>
                             <button className="choice-btn" onClick={() => {
                                 setSelectedTrip(trip);
                                 setConfirmAction(true);
@@ -1140,16 +1244,6 @@ function ManagementDeleteComponent({props}) {
                     <p><strong>Warning:</strong> This action cannot be undone and will remove the service from all trips!</p>
                 )}
                 <button className="choice-btn" onClick={handleConfirm}>Confirm Delete</button>
-                <button className="choice-btn" onClick={() => {
-                    if (deleteOption === 'from-trip') {
-                        setConfirmAction(false);
-                        setSelectedTrip(null);
-                    } else {
-                        setDeleteOption('');
-                    }
-                }}>
-                    Cancel
-                </button>
             </div>
         );
     }

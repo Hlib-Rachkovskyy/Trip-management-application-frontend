@@ -15,11 +15,30 @@ export function ManagerHeader({props}){
 
 export function AnnouncementsWriteOnly({props}) {
     const [newAnnouncement, setNewAnnouncement] = useState({ tripId: '', content: '' });
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
+    const [services, setServices] = useState(null);
+
 
     useEffect(() => {
-        setLoading(false)
-    }, []);
+        if (newAnnouncement.tripId) {
+            const results = [];
+            for (const trip of props.userData.trips) {
+                if (trip.id.toString() === newAnnouncement.tripId.toString()) {
+                    for (const hotel of trip.hotelsInTrip || []) {
+                        results.push(hotel.hotel);
+                    }
+
+                    for (const vehicle of trip.vehiclesInTrip || []) {
+                        results.push(vehicle.vehicle);
+                    }
+                    break;
+                }
+            }
+            setServices(results);
+        } else {
+            setServices(null);
+        }
+    }, [newAnnouncement.tripId, props.userData.trips]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -39,9 +58,17 @@ export function AnnouncementsWriteOnly({props}) {
     };
 
     if (loading) return <div>Loading...</div>;
-
     return (
-        <div className="announcements-write">
+
+
+        <div>
+            {services?.map(a => {
+                return(
+                    <div key={a.id} className="manager-info">
+                        <h4>Service</h4>
+                        <p>Name: {a.name} </p>
+                    </div>
+                )})}
             <h3>Create Announcement</h3>
             
             <form onSubmit={handleSubmit} className="announcement-form">
@@ -80,7 +107,7 @@ export function AnnouncementsWriteOnly({props}) {
                     />
                 </div>
                 
-                <button type="submit" className="btn btn-primary">
+                <button type="submit" className="choice-btn">
                     Create Announcement
                 </button>
             </form>

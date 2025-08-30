@@ -23,6 +23,8 @@ function App(){
     const [refetchFunction, setRefetchFunction] = useState(null);
     const [currentTouristService, setCurrentTouristService] = useState(null);
     const [currentOptionService, setCurrentOptionService] = useState(null);
+    const [addOption, setAddOption] = useState('');
+
     const props = {
         id, setId,
         currentUserId, setCurrentUserId,
@@ -38,7 +40,7 @@ function App(){
         currentElementId, setCurrentElementId,
         updateData, setUpdateData,
         refetchFunction, setRefetchFunction,
-
+        addOption, setAddOption,
         currentTouristService, setCurrentTouristService,
         currentOptionService, setCurrentOptionService
     }
