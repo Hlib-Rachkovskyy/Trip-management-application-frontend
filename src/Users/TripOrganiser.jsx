@@ -89,10 +89,10 @@ export function OrganiserPostBlockInteraction({props, data}) {
     )
 }
 
-
 export function ViewWrittenForms({props}) {
     const [companyData, setCompanyData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [selectedUserId, setSelectedUserId] = useState('');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -112,21 +112,75 @@ export function ViewWrittenForms({props}) {
 
     if (loading) return <div>Loading...</div>;
 
+    const userForms = companyData?.contactForms?.reduce((acc, form) => {
+        const userId = form.user?.id;
+        if (!acc[userId]) {
+            acc[userId] = {
+                user: form.user,
+                forms: []
+            };
+        }
+        acc[userId].forms.push(form);
+        return acc;
+    }, {}) || {};
+
+    const users = Object.values(userForms);
+
+    const handleUserSelect = (e) => {
+        setSelectedUserId(e.target.value);
+    };
+
+    const selectedUser = selectedUserId ? userForms[selectedUserId] : null;
 
     return (
         <div className="contact-forms">
             <h3>Contact Forms</h3>
-            {companyData?.contactForms?.map(form => (
-                <div key={form.id} className="contact-form-card">
-                    <div className="form-header">
-                        <p><strong>From:</strong> {form.user?.name} {form.user?.surname}</p>
-                        <p><strong>Date:</strong> {form.sendDate}</p>
+            {users.length > 0 ? (
+                <div>
+                    <div className="user-selector" >
+                        <label htmlFor="user-select" >
+                            Select a user to view their contact forms:
+                        </label>
+                        <select
+                            id="user-select"
+                            value={selectedUserId}
+                            onChange={handleUserSelect}>
+                            <option value="">-- Choose a user --</option>
+                            {users.map(({user, forms}) => (
+                                <option key={user.id} value={user.id}>
+                                    {user.name} {user.surname} ({user.email}) - {forms.length} forms
+                                </option>
+                            ))}
+                        </select>
                     </div>
-                    <div className="form-content">
-                        <p>{form.text}</p>
-                    </div>
+
+                    {selectedUser && (
+                        <div className="user-forms">
+                            <div>
+                                <h4>Contact forms from {selectedUser.user.name} {selectedUser.user.surname}</h4>
+                                <p><strong>Email:</strong> {selectedUser.user.email}</p>
+                                <p><strong>Total forms:</strong> {selectedUser.forms.length}</p>
+                            </div>
+
+                            {selectedUser.forms.map(form => (
+                                <div
+                                    key={form.id}
+                                    className="contact-form-card">
+                                    <div className="form-header" style={{ marginBottom: '10px' }}>
+                                        <p><strong>From:</strong> {form.user?.name} {form.user?.surname}</p>
+                                        <p><strong>Date:</strong> {form.sendDate}</p>
+                                    </div>
+                                    <div className="form-content">
+                                        <p >{form.text}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
-            )) || <p>No contact forms yet</p>}
+            ) : (
+                <p>No contact forms yet</p>
+            )}
         </div>
     );
 }
@@ -267,7 +321,7 @@ function AssignManager({props}) {
     const [managerList, setManagerList] = useState([])
     const [loading, setLoading] = useState(true)
 
-    const refetchData = async () => {
+    const fetchData = async () => {
         try {
             const response = await fetch(`/organiser/company/${props.userData.company.id}`);
             const company = await response.json();
@@ -281,7 +335,7 @@ function AssignManager({props}) {
     };
 
     const fetchAndFilter = async () => {
-        const data = await refetchData();
+        const data = await fetchData();
         const filteredManagers = data.filter(
             manager => !props.popupData.tripManager?.some(pm => pm.id === manager.id)
         );
@@ -688,8 +742,10 @@ function ManagementEditComponent({props}) {
                 if (props.refreshTripData) {
                     props.refreshTripData();
                 }
-
+                const updatedData = await props.refetchFunction();
+                props.setUserData(updatedData)
                 handleData();
+
             } else {
                 const error = await response.text();
                 alert('Error: ' + error);
@@ -704,7 +760,7 @@ function ManagementEditComponent({props}) {
     return (
         <form className="scrollableArea" onSubmit={handleSubmit}>
             {Object.entries(props.currentTouristService || {}).map(([key, value]) => {
-                if (Array.isArray(value) || key === 'id') return null;
+                if (Array.isArray(value) || key === 'id' || key === 'state') return null;
 
                 return (
                     <div key={key} className="form-field">
@@ -767,6 +823,8 @@ function ManagementAddComponent({props}) {
             const savedData = await response.json();
 
             setSavedServiceData(savedData);
+            const updatedData = await props.refetchFunction();
+            props.setUserData(updatedData)
             return savedData;
         } catch (err) {
             setError(err.message);
@@ -793,7 +851,6 @@ function ManagementAddComponent({props}) {
             if (!response.ok) {
                 throw new Error(`Failed to link ${serviceType} to trip: ${response.statusText}`);
             }
-
             const result = await response.json();
             return result;
         } catch (err) {
@@ -904,7 +961,6 @@ function ManagementAddComponent({props}) {
             ? (serviceType)
             : serviceType;
 
-        console.log(formObject)
         const tripId = formObject.tripId;
 
         if (!tripId) {
@@ -928,7 +984,8 @@ function ManagementAddComponent({props}) {
             };
 
             await linkServiceToTrip(tripData, savedServiceData, currentServiceType, tripId);
-
+            const updatedData = await props.refetchFunction();
+            props.setUserData(updatedData)
             setRelation('');
             setSavedServiceData(null);
             setServiceType('');
@@ -1163,7 +1220,6 @@ function ManagementDeleteComponent({props}) {
         try {
             const isVehicle = !!props.currentTouristService.vehicleType;
             const serviceType = isVehicle ? 'vehicle' : 'hotel';
-            console.log(props.currentTouristService)
             const endpoint = `/${serviceType}/${props.currentTouristService.id}`;
 
             const response = await fetch(endpoint, { method: 'DELETE' });
@@ -1185,12 +1241,14 @@ function ManagementDeleteComponent({props}) {
     };
 
 
-    const handleConfirm = () => {
+    const handleConfirm = async () => {
         if (deleteOption === 'from-trip') {
             handleDeleteFromTrip();
         } else if (deleteOption === 'from-system') {
             handleDeleteFromSystem();
         }
+        const updatedData = await props.refetchFunction();
+        props.setUserData(updatedData)
         props.resetManagementState()
     };
 
@@ -1226,7 +1284,6 @@ function ManagementDeleteComponent({props}) {
                         </div>
                     ))}
                 </div>
-                <button className="choice-btn" onClick={() => setDeleteOption('')}>Back</button>
             </div>
         );
     }
