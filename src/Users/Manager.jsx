@@ -169,12 +169,9 @@ export function ManagerPopupExpanded({props}) {
         setLoading(false)
     }, [serviceLogic]);
 
-
-
-
-    const handleServiceStatusChange = async (serviceId, newStatus) => {
+    const handleServiceStatusChange = async (serviceObject, newStatus) => {
         try {
-            const response = await fetch(`/tourist-service/${serviceId}/status`, {
+            const response = await fetch(`/tourist-service/${serviceObject.id}/status`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ newStatus: newStatus })
@@ -182,6 +179,8 @@ export function ManagerPopupExpanded({props}) {
 
             if (response.ok) {
                 alert('Service status updated successfully!');
+                serviceObject.state = newStatus;
+
                 setServiceLogic(!serviceLogic)
             } else {
                 const error = await response.text();
@@ -214,14 +213,14 @@ export function ManagerPopupExpanded({props}) {
                                 <div className="service-actions">
                                     <button 
                                         className="choice-btn" 
-                                        onClick={() => handleServiceStatusChange(element.hotel?.id, 'Active')}
+                                        onClick={() => handleServiceStatusChange(element.hotel, 'Active')}
                                         disabled={element.hotel?.state === 'Active' || element.hotel?.state === 'Completed'}
                                     >
                                         Start Service
                                     </button>
                                     <button 
                                         className="choice-btn" 
-                                        onClick={() => handleServiceStatusChange(element.hotel?.id, 'Completed')}
+                                        onClick={() => handleServiceStatusChange(element.hotel, 'Completed')}
                                         disabled={element.hotel?.state === 'Completed'}
                                     >
                                         End Service
@@ -241,14 +240,14 @@ export function ManagerPopupExpanded({props}) {
                                 <div className="service-actions">
                                     <button 
                                         className="choice-btn" 
-                                        onClick={() => handleServiceStatusChange(element.vehicle.id, 'Active')}
+                                        onClick={() => handleServiceStatusChange(element.vehicle, 'Active')}
                                         disabled={element.vehicle?.state === 'Active' || element.vehicle?.state === 'Completed'}
                                     >
                                         Start Service
                                     </button>
                                     <button 
                                         className="choice-btn" 
-                                        onClick={() => handleServiceStatusChange(element.vehicle.id, 'Completed')}
+                                        onClick={() => handleServiceStatusChange(element.vehicle, 'Completed')}
                                         disabled={element.vehicle?.state === 'Completed'}
                                     >
                                         End Service

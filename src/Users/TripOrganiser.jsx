@@ -244,8 +244,8 @@ export function TripEdition({ props }) {
             if (response.ok) {
                 const tripId = await response.json();
                 props.setPopup(null);
-
-
+                const updatedData = await props.refetchFunction();
+                props.setUserData(updatedData)
             } else {
                 const errorText = await response.text();
                 console.error('Error submitting form:', errorText);
