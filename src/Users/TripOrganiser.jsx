@@ -1290,7 +1290,7 @@ function ManagementDeleteComponent({props}) {
 
     if (confirmAction || deleteOption === 'from-system') {
         const actionText = deleteOption === 'from-trip'
-            ? `remove "${props.currentTouristService?.name}" from trip "${selectedTrip?.name}"`
+            ? `remove "${props.currentTouristService?.name}" from selected trip `
             : `permanently delete "${props.currentTouristService?.name}" from the entire system`;
 
         return (

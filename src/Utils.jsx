@@ -102,6 +102,13 @@ export function UserData({props}) {
             } else {
                 alert("Failed to approve user");
             }
+
+
+            const data = props.refetchFunction()
+            props.setUserData(data)
+            props.setPopupData(null)
+            props.setPopup(null)
+
         } catch (error) {
             console.error("Error approving user:", error);
         }
@@ -118,6 +125,11 @@ export function UserData({props}) {
             } else {
                 alert("Failed to remove user");
             }
+
+            const data = props.refetchFunction()
+            props.setUserData(data)
+            props.setPopupData(null)
+            props.setPopup(null)
         } catch (error) {
             console.error("Error removing user:", error);
         }
